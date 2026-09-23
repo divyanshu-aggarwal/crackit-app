@@ -19,7 +19,7 @@ public class ChatMessage {
     @Column(name = "job_id", length = 36, nullable = false)
     private String jobId;
 
-    @Column(name = "role", length = 20, nullable = false)
+    @Column(name = "`role`", length = 20, nullable = false)
     private String role; // "user" or "assistant"
 
     @Column(columnDefinition = "LONGTEXT", nullable = false)

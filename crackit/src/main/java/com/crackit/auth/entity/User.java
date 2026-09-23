@@ -37,7 +37,7 @@ public class User {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", length = 20)
+    @Column(name = "`role`", length = 20)
     @Builder.Default
     private com.crackit.auth.enums.Role role = com.crackit.auth.enums.Role.ROLE_USER;
 
@@ -57,7 +57,7 @@ public class User {
     @Column(name = "current_company", length = 150)
     private String currentCompany;
 
-    @Column(name = "current_role", length = 150)
+    @Column(name = "`current_role`", length = 150)
     private String currentRole;
 
     @CreationTimestamp
