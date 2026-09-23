@@ -42,13 +42,13 @@ We introduced **Apache Kafka** to transform this heavy synchronous bottleneck in
 ```mermaid
 flowchart TD
     subgraph Client["Client Layer (React 19)"]
-        UI["User triggers 'Generate Prep'<br/>(InterviewPrepPage.jsx)"]
+        UI["User triggers Generate Prep<br/>(InterviewPrepPage.jsx)"]
         Spinner["AiLoadingOverlay Active<br/>(Polls /status every 2s)"]
     end
 
     subgraph SpringBoot["Spring Boot Backend (Port 5981)"]
-        Ctrl["InterviewPrepController<br/>POST /api/ai/jobs/{id}/interview-prep"]
-        DB[("MySQL Database<br/>status: PENDING / COMPLETED / FAILED")]
+        Ctrl["InterviewPrepController<br/>POST /api/ai/jobs/:jobId/interview-prep"]
+        DB[("MySQL Database<br/>status: PENDING, COMPLETED, FAILED")]
         Producer["InterviewPrepProducer<br/>(KafkaTemplate, Key: jobId)"]
         Consumer["InterviewPrepConsumer<br/>(crackit-ai-worker-group)"]
     end
@@ -56,7 +56,7 @@ flowchart TD
     subgraph KafkaCluster["Apache Kafka Cluster (KRaft Mode - Port 9092)"]
         TopicMain["Topic: crackit.interview.prep.requests<br/>(3 Partitions, Key: jobId)"]
         TopicRetry["Topic: crackit.interview.prep.requests-retry-2000<br/>(Exponential Backoff: 2s, 4s, 8s)"]
-        TopicDLT["Topic: crackit.interview.prep.requests-dlt<br/>(Dead Letter Topic / Poison Pill Queue)"]
+        TopicDLT["Topic: crackit.interview.prep.requests-dlt<br/>(Dead Letter Topic or Poison Pill Queue)"]
     end
 
     subgraph AIService["Python Microservice (Port 8000)"]
@@ -64,26 +64,26 @@ flowchart TD
         Gemini["Google Gemini 2.5 Flash LLM"]
     end
 
-    UI -->|1. HTTP POST (~20ms)| Ctrl
-    Ctrl -->|2. Insert row status=PENDING| DB
-    Ctrl -->|3. Publish Event| Producer
-    Producer -->|4. Produce Record| TopicMain
-    Ctrl -->>|5. 202 Accepted {status: PENDING}| UI
-    UI -.->|6. Periodic Poll /status| DB
+    UI -->|"1. HTTP POST (~20ms)"| Ctrl
+    Ctrl -->|"2. Insert row status=PENDING"| DB
+    Ctrl -->|"3. Publish Event"| Producer
+    Producer -->|"4. Produce Record"| TopicMain
+    Ctrl -->>|"5. 202 Accepted (status: PENDING)"| UI
+    UI -.->|"6. Periodic Poll /status"| DB
 
-    TopicMain -->|7. Consume batch| Consumer
-    Consumer -->|8. HTTP POST payload| FastAPI
-    FastAPI -->|9. LLM Prompt & Inference| Gemini
-    Gemini -->>|10. JSON Structured Output| FastAPI
-    FastAPI -->>|11. Return Topics & Questions| Consumer
+    TopicMain -->|"7. Consume batch"| Consumer
+    Consumer -->|"8. HTTP POST payload"| FastAPI
+    FastAPI -->|"9. LLM Prompt and Inference"| Gemini
+    Gemini -->>|"10. JSON Structured Output"| FastAPI
+    FastAPI -->>|"11. Return Topics & Questions"| Consumer
 
-    Consumer -->|12a. Success: Save Topics & mark COMPLETED| DB
-    Consumer -.->|12b. Transient Error: Retry with Backoff| TopicRetry
-    TopicRetry -.->|12c. 3 Failed Attempts| TopicDLT
-    TopicDLT -->|12d. Mark status=FAILED with error message| DB
+    Consumer -->|"12a. Success: Save Topics & mark COMPLETED"| DB
+    Consumer -.->|"12b. Transient Error: Retry with Backoff"| TopicRetry
+    TopicRetry -.->|"12c. 3 Failed Attempts"| TopicDLT
+    TopicDLT -->|"12d. Mark status=FAILED with error message"| DB
 
-    DB -.->|13. Status is COMPLETED| Spinner
-    Spinner -->|14. Render Generated Prep Cards| UI
+    DB -.->|"13. Status is COMPLETED"| Spinner
+    Spinner -->|"14. Render Generated Prep Cards"| UI
 ```
 
 ---

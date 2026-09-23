@@ -46,15 +46,15 @@ flowchart TD
         Context["AuthContext.jsx<br/>(Stores JWT with role & avatar)"]
     end
 
-    subgraph AuthN["Authentication (AuthN) Layer"]
-        LocalLogin["AuthService.login() / signup()<br/>BCrypt PasswordEncoder"]
+    subgraph AuthN["Authentication Layer (AuthN)"]
+        LocalLogin["AuthService: login or signup<br/>BCrypt PasswordEncoder"]
         GoogleLogin["AuthService.googleLogin()<br/>Google OIDC TokenInfo Verification"]
         JwtUtil["JwtUtil.generateToken()<br/>Embeds sub, userId, role claim"]
     end
 
-    subgraph AuthZ["Authorization (AuthZ) Layer"]
-        Filter["JwtAuthFilter (OncePerRequestFilter)<br/>Extracts JWT -> SecurityContext"]
-        SecConfig["SecurityFilterChain<br/>/api/auth/** -> permitAll()<br/>/api/admin/** -> hasRole('ADMIN')<br/>anyRequest() -> authenticated()"]
+    subgraph AuthZ["Authorization Layer (AuthZ)"]
+        Filter["JwtAuthFilter (OncePerRequestFilter)<br/>Extracts JWT to SecurityContext"]
+        SecConfig["SecurityFilterChain<br/>permitAll: /api/auth/**<br/>hasRole ADMIN: /api/admin/**<br/>authenticated: all other requests"]
         MethodSec["Method Security (@PreAuthorize)<br/>IDOR Ownership checks in Services"]
     end
 
@@ -64,23 +64,23 @@ flowchart TD
         DB[("MySQL Database<br/>users: password_hash, role, auth_provider")]
     end
 
-    Login -->|1a. Email/Password| LocalLogin
-    Signup -->|1b. Register| LocalLogin
-    Login -->|1c. Google ID Token| GoogleLogin
-    Signup -->|1d. Google ID Token| GoogleLogin
+    Login -->|"1a. Email or Password"| LocalLogin
+    Signup -->|"1b. Register"| LocalLogin
+    Login -->|"1c. Google ID Token"| GoogleLogin
+    Signup -->|"1d. Google ID Token"| GoogleLogin
 
-    LocalLogin -->|2. Verify Credentials| DB
-    GoogleLogin -->|2. Verify OIDC with Google| DB
+    LocalLogin -->|"2. Verify Credentials"| DB
+    GoogleLogin -->|"2. Verify OIDC with Google"| DB
 
-    LocalLogin -->|3. Issue JWT| JwtUtil
-    GoogleLogin -->|3. Issue JWT| JwtUtil
-    JwtUtil -->>|4. Return AuthResponse| Context
+    LocalLogin -->|"3. Issue JWT"| JwtUtil
+    GoogleLogin -->|"3. Issue JWT"| JwtUtil
+    JwtUtil -->>|"4. Return AuthResponse"| Context
 
-    Context -->|5. Bearer JWT Header| Filter
-    Filter -->|6. Populate Authentication| SecConfig
-    SecConfig -->|7. Role Allowed| MethodSec
-    MethodSec -->|8a. Candidate Resource| UserAPIs
-    MethodSec -->|8b. Admin Resource| AdminAPIs
+    Context -->|"5. Bearer JWT Header"| Filter
+    Filter -->|"6. Populate Authentication"| SecConfig
+    SecConfig -->|"7. Role Allowed"| MethodSec
+    MethodSec -->|"8a. Candidate Resource"| UserAPIs
+    MethodSec -->|"8b. Admin Resource"| AdminAPIs
 ```
 
 ---

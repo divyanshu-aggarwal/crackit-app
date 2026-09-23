@@ -52,7 +52,7 @@ flowchart TD
     end
 
     subgraph RedisCluster["Redis 7 Container (RAM)"]
-        RedisMemory[("Redis In-Memory Key-Value Store<br/>MaxMemory: 256MB | Policy: allkeys-lru")]
+        RedisMemory[("Redis In-Memory Key-Value Store<br/>MaxMemory: 256MB - Policy: allkeys-lru")]
         Key1["discoveredJobs::software engineer<br/>TTL: 15 mins (JSON)"]
         Key2["jobDetails::02414bfe-...<br/>TTL: 30 mins (JSON)"]
     end
@@ -61,22 +61,22 @@ flowchart TD
         MySQL[("MySQL 8 / TiDB Cloud<br/>Tables: jobs, discovered_jobs")]
     end
 
-    Client -->|GET /api/jobs/{id}| Controller
+    Client -->|"GET /api/jobs/:jobId"| Controller
     Controller --> AOPProxy
 
-    AOPProxy -->|1. Query Cache Key| RedisMemory
-    RedisMemory -->|Cache Hit: ~1ms| AOPProxy
-    AOPProxy -->|Return JSON| Client
+    AOPProxy -->|"1. Query Cache Key"| RedisMemory
+    RedisMemory -->|"Cache Hit: ~1ms"| AOPProxy
+    AOPProxy -->|"Return JSON"| Client
 
-    RedisMemory -.->|Cache Miss| AOPProxy
-    AOPProxy -->|2. Invoke Method| ServiceLogic
-    ServiceLogic -->|3. Query Table| MySQL
-    MySQL -->|4. Return Row Data| ServiceLogic
-    ServiceLogic -->|5. Write to Cache with TTL| RedisMemory
-    ServiceLogic -->|6. Return DTO| Client
+    RedisMemory -.->|"Cache Miss"| AOPProxy
+    AOPProxy -->|"2. Invoke Method"| ServiceLogic
+    ServiceLogic -->|"3. Query Table"| MySQL
+    MySQL -->|"4. Return Row Data"| ServiceLogic
+    ServiceLogic -->|"5. Write to Cache with TTL"| RedisMemory
+    ServiceLogic -->|"6. Return DTO"| Client
 
-    RedisMemory -.->|Connection Timeout / Crash| ErrorHandler
-    ErrorHandler -->|Graceful Degradation| ServiceLogic
+    RedisMemory -.->|"Connection Timeout or Crash"| ErrorHandler
+    ErrorHandler -->|"Graceful Degradation"| ServiceLogic
 ```
 
 ---
@@ -172,9 +172,9 @@ Spring's `@Cacheable` and `@Transactional` rely on **dynamic CGLIB/JDK proxies**
 
 ```mermaid
 flowchart LR
-    Caller["External Controller"] -->|Intercepted!| Proxy["Spring AOP Proxy"]
-    Proxy -->|Cache Miss| Target["Target Service Bean"]
-    Target -.->|Internal this.method() call| Bypass["Bypasses Proxy! (No Caching)"]
+    Caller["External Controller"] -->|"Intercepted"| Proxy["Spring AOP Proxy"]
+    Proxy -->|"Cache Miss"| Target["Target Service Bean"]
+    Target -.->|"Internal this.method call"| Bypass["Bypasses Proxy (No Caching)"]
 ```
 
 When method `A()` calls `this.methodB()` inside the same bean, the call executes on the raw `this` reference, **completely bypassing the Spring AOP proxy interceptor**.
