@@ -1,0 +1,137 @@
+services:
+  # ─── 1. MySQL Database ──────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: crackit-mysql
+    hostname: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: job_assistant
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "3307:3306" # Mapped to 3307 on host laptop to prevent collision with local MySQL on 3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      crackit-net:
+        aliases:
+          - mysql
+          - crackit-mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
+      interval: 4s
+      timeout: 4s
+      retries: 15
+      start_period: 15s
+
+  # ─── 2. Apache Kafka (KRaft mode) ───────────────────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: crackit-kafka
+    hostname: kafka
+    restart: always
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092:9092"
+    networks:
+      crackit-net:
+        aliases:
+          - kafka
+
+  # ─── 3. Kafka UI Dashboard ──────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: crackit-kafka-ui
+    restart: always
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: crackit-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8085:8080"
+    networks:
+      - crackit-net
+
+  # ─── 4. Python FastAPI AI Service ────────────────────────────────────
+  crackit-ai:
+    build:
+      context: ./crackit-ai-service
+    container_name: crackit-ai
+    hostname: crackit-ai
+    restart: always
+    env_file:
+      - ./crackit-ai-service/.env
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "8000:8000"
+    networks:
+      crackit-net:
+        aliases:
+          - crackit-ai
+
+  # ─── 5. Spring Boot Backend ──────────────────────────────────────────
+  crackit-backend:
+    build:
+      context: ./crackit
+    container_name: crackit-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      crackit-ai:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/job_assistant?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      AI_SERVICE_URL: http://crackit-ai:8000/api/ai
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_MOCK_MODE: ${RAZORPAY_MOCK_MODE:-true}
+    ports:
+      - "5981:5981"
+    networks:
+      - crackit-net
+
+  # ─── 6. React Frontend (Nginx) ───────────────────────────────────────
+  crackit-ui:
+    build:
+      context: ./crackit-ui
+      args:
+        VITE_API_BASE_URL: http://localhost:5981
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-582453823514-gt37vv6rom600995rgds07jafoeheul9.apps.googleusercontent.com}
+    container_name: crackit-ui
+    restart: always
+    depends_on:
+      - crackit-backend
+    ports:
+      - "5173:80"
+    networks:
+      - crackit-net
+
+volumes:
+  mysql_data:
+
+networks:
+  crackit-net:
+    driver: bridge

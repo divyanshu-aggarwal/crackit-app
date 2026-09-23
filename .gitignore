@@ -47,3 +47,4 @@ crackit-ai-service/.env
 *.py[cod]
 *$py.class
 .pytest_cache/
+backup.sql
