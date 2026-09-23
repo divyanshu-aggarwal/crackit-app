@@ -14,6 +14,10 @@ import com.crackit.resume.repository.ExperienceRepository;
 import com.crackit.resume.repository.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +38,12 @@ public class JobDiscoveryService {
     private final SkillRepository skillRepository;
     private final ExperienceRepository experienceRepository;
 
+    @Autowired
+    @Lazy
+    private JobDiscoveryService self;
+
     // ─── Scheduled fetch every hour for common roles ─────────────────────────
+    @CacheEvict(value = "discoveredJobs", allEntries = true)
     @Scheduled(fixedDelay = 3600000)
     public void scheduledFetch() {
         log.info("Running scheduled job discovery fetch...");
@@ -294,9 +303,15 @@ public class JobDiscoveryService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String role = user.getCurrentRole() != null && !user.getCurrentRole().isBlank()
-                ? user.getCurrentRole()
-                : "Software Engineer";
+                ? user.getCurrentRole().trim().toLowerCase()
+                : "software engineer";
 
+        return self.getCachedJobsForRole(role);
+    }
+
+    @Cacheable(value = "discoveredJobs", key = "#role")
+    public List<DiscoveredJobDto> getCachedJobsForRole(String role) {
+        log.info("[CACHE MISS] Querying database for role: '{}'", role);
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
         List<DiscoveredJob> freshJobs =

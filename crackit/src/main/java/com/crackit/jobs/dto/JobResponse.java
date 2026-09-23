@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 public class JobResponse {
 
     private String id;

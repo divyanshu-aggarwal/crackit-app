@@ -64,7 +64,27 @@ services:
     networks:
       - crackit-net
 
-  # ─── 4. Python FastAPI AI Service ────────────────────────────────────
+  # ─── 4. Redis In-Memory Cache ───────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: crackit-redis
+    hostname: redis
+    restart: always
+    command: ["redis-server", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6380:6379" # Mapped to 6380 on host to prevent collision with local host Redis on 6379
+    networks:
+      crackit-net:
+        aliases:
+          - redis
+          - crackit-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── 5. Python FastAPI AI Service ────────────────────────────────────
   crackit-ai:
     build:
       context: ./crackit-ai-service
@@ -82,7 +102,7 @@ services:
         aliases:
           - crackit-ai
 
-  # ─── 5. Spring Boot Backend ──────────────────────────────────────────
+  # ─── 6. Spring Boot Backend ──────────────────────────────────────────
   crackit-backend:
     build:
       context: ./crackit
@@ -95,6 +115,8 @@ services:
         condition: service_started
       kafka:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/job_assistant?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true
       SPRING_DATASOURCE_USERNAME: root
@@ -102,6 +124,8 @@ services:
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       AI_SERVICE_URL: http://crackit-ai:8000/api/ai
       KAFKA_ENABLED: "true"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092

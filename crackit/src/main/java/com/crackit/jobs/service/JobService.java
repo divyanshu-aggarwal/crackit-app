@@ -12,6 +12,8 @@ import com.crackit.tracker.entity.JobApplication;
 import com.crackit.tracker.enums.ApplicationStatus;
 import com.crackit.tracker.repository.JobApplicationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class JobService {
     private final JobApplicationRepository jobApplicationRepository;
 
 
+    @CacheEvict(value = "jobDetails", allEntries = true)
     public JobResponse createJob(JobRequest request) {
         User user = getLoggedInUser();
 
@@ -67,6 +70,7 @@ public class JobService {
                 .toList();
     }
 
+    @Cacheable(value = "jobDetails", key = "#jobId")
     public JobResponse getJobById(String jobId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));

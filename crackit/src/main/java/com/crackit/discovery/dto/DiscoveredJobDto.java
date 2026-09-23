@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 public class DiscoveredJobDto {
     private String id;
     private String externalId;
