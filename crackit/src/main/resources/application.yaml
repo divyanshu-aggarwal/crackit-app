@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: CrackIt
+  config:
+    import: "optional:classpath:application-local.yaml"
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/job_assistant}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+
+  sql:
+    init:
+      mode: ${SPRING_SQL_INIT_MODE:always}
+
+  task:
+    scheduling:
+      pool:
+        size: 5
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: crackit-ai-worker-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.crackit.*"
+
+kafka:
+  enabled: ${KAFKA_ENABLED:true}
+
+server:
+  port: ${SERVER_PORT:5981}
+  address: 0.0.0.0
+
+jwt:
+  secret: ${JWT_SECRET:crackit-default-jwt-secret-key-replace-in-production-2026}
+
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8000/api/ai}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://172.168.0.142:5173}
+
+adzuna:
+  app:
+    id: ${ADZUNA_APP_ID:your_adzuna_app_id}
+    key: ${ADZUNA_APP_KEY:your_adzuna_app_key}
+
+jsearch:
+  api:
+    key: ${JSEARCH_API_KEY:your_jsearch_api_key}
+
+geodb:
+  api:
+    key: ${GEODB_API_KEY:your_geodb_api_key}
+    host: ${GEODB_API_HOST:wft-geo-db.p.rapidapi.com}
