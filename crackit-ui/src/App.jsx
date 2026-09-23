@@ -13,6 +13,8 @@ import InterviewPrepPage from "./pages/InterviewPrepPage";
 import DiscoverPage from "./pages/DiscoverPage";
 import MyInterviewsPage from "./pages/MyInterviewsPage";
 import { ToastProvider } from './components/ui/ToastProvider'
+import ErrorBoundary from './components/ui/ErrorBoundary'
+import NotFoundPage from './pages/NotFoundPage'
 
 
 function PrivateRoute({ children }) {
@@ -22,28 +24,33 @@ function PrivateRoute({ children }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-              <Route index element={<Navigate to="/dashboard" />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="jobs" element={<Jobs />} />
-              <Route path="jobs/:jobId" element={<JobDetail />} />
-              <Route path="tracker" element={<Tracker />} />
-              <Route path="resume" element={<ResumePage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="jobs/:jobId/prep" element={<InterviewPrepPage />} />
-              <Route path="discover" element={<DiscoverPage />} />
-              <Route path="interviews" element={<MyInterviewsPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ToastProvider>
-    </AuthProvider>
+              <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+                <Route index element={<Navigate to="/dashboard" />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="jobs" element={<Jobs />} />
+                <Route path="jobs/:jobId" element={<JobDetail />} />
+                <Route path="tracker" element={<Tracker />} />
+                <Route path="resume" element={<ResumePage />} />
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="jobs/:jobId/prep" element={<InterviewPrepPage />} />
+                <Route path="discover" element={<DiscoverPage />} />
+                <Route path="interviews" element={<MyInterviewsPage />} />
+              </Route>
+
+              {/* Catch-all Creative 404 Route */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </BrowserRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const ToastContext = createContext(null)
 
@@ -12,8 +12,22 @@ export function ToastProvider({ children }) {
 
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
-    }, 2800)
+    }, 3200)
   }
+
+  useEffect(() => {
+    const handleCustomToast = (e) => {
+      if (e.detail?.message) {
+        showToast({
+          type: e.detail.type || 'info',
+          message: e.detail.message
+        })
+      }
+    }
+
+    window.addEventListener('crackit:toast', handleCustomToast)
+    return () => window.removeEventListener('crackit:toast', handleCustomToast)
+  }, [])
 
   return (
     <ToastContext.Provider value={{ showToast }}>
