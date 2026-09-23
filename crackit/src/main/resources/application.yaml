@@ -89,5 +89,6 @@ razorpay:
   key:
     id: ${RAZORPAY_KEY_ID:}
     secret: ${RAZORPAY_KEY_SECRET:}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:mock_webhook_secret_crackit}
   mock-mode: ${RAZORPAY_MOCK_MODE:true}
 

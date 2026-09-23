@@ -37,6 +37,9 @@ public class RazorpayService {
     @Value("${razorpay.key.secret:}")
     private String keySecret;
 
+    @Value("${razorpay.webhook-secret:}")
+    private String webhookSecret;
+
     @Value("${razorpay.mock-mode:true}")
     private boolean mockMode;
 
@@ -130,6 +133,44 @@ public class RazorpayService {
             );
         } catch (Exception e) {
             log.error("Signature verification error: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean verifyWebhookSignature(String rawPayload, String signature) {
+        if (signature == null || signature.isBlank()) {
+            log.warn("Webhook signature header (X-Razorpay-Signature) is missing");
+            return false;
+        }
+
+        if (isMockMode() && "mock_webhook_signature".equals(signature)) {
+            log.info("Mock webhook signature accepted");
+            return true;
+        }
+
+        String secretToUse = (webhookSecret != null && !webhookSecret.isBlank()) ? webhookSecret : keySecret;
+        if (secretToUse == null || secretToUse.isBlank()) {
+            log.error("Neither razorpay.webhook-secret nor razorpay.key.secret is configured for webhook verification");
+            return false;
+        }
+
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretToUse.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] hash = mac.doFinal(rawPayload.getBytes(StandardCharsets.UTF_8));
+            String generatedSignature = HexFormat.of().formatHex(hash);
+
+            boolean matches = MessageDigest.isEqual(
+                    generatedSignature.getBytes(StandardCharsets.UTF_8),
+                    signature.getBytes(StandardCharsets.UTF_8)
+            );
+
+            if (!matches) {
+                log.warn("Webhook signature mismatch. Expected: {}, Received: {}", generatedSignature, signature);
+            }
+            return matches;
+        } catch (Exception e) {
+            log.error("Webhook signature verification error: {}", e.getMessage());
             return false;
         }
     }
