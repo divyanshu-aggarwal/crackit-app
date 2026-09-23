@@ -7,6 +7,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -20,7 +21,17 @@ public class CorsConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(allowedOrigins);
+        List<String> patterns = new ArrayList<>(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://172.168.*:*",
+                "https://*.vercel.app",
+                "https://*.onrender.com"
+        ));
+        if (allowedOrigins != null) {
+            patterns.addAll(allowedOrigins);
+        }
+        config.setAllowedOriginPatterns(patterns);
 
         config.setAllowedMethods(
                 List.of(
