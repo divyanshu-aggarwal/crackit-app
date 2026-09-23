@@ -74,7 +74,7 @@ flowchart TD
 
     LocalLogin -->|"3. Issue JWT"| JwtUtil
     GoogleLogin -->|"3. Issue JWT"| JwtUtil
-    JwtUtil -->>|"4. Return AuthResponse"| Context
+    JwtUtil -->|"4. Return AuthResponse"| Context
 
     Context -->|"5. Bearer JWT Header"| Filter
     Filter -->|"6. Populate Authentication"| SecConfig

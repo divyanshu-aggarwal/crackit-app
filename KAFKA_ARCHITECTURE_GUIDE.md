@@ -68,16 +68,16 @@ flowchart TD
     Ctrl -->|"2. Insert row status=PENDING"| DB
     Ctrl -->|"3. Publish Event"| Producer
     Producer -->|"4. Produce Record"| TopicMain
-    Ctrl -->>|"5. 202 Accepted (status: PENDING)"| UI
+    Ctrl -->|"5. 202 Accepted (status: PENDING)"| UI
     UI -.->|"6. Periodic Poll /status"| DB
 
     TopicMain -->|"7. Consume batch"| Consumer
     Consumer -->|"8. HTTP POST payload"| FastAPI
     FastAPI -->|"9. LLM Prompt and Inference"| Gemini
-    Gemini -->>|"10. JSON Structured Output"| FastAPI
-    FastAPI -->>|"11. Return Topics & Questions"| Consumer
+    Gemini -->|"10. JSON Structured Output"| FastAPI
+    FastAPI -->|"11. Return Topics and Questions"| Consumer
 
-    Consumer -->|"12a. Success: Save Topics & mark COMPLETED"| DB
+    Consumer -->|"12a. Success: Save Topics and mark COMPLETED"| DB
     Consumer -.->|"12b. Transient Error: Retry with Backoff"| TopicRetry
     TopicRetry -.->|"12c. 3 Failed Attempts"| TopicDLT
     TopicDLT -->|"12d. Mark status=FAILED with error message"| DB
