@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
 import MobileBottomNav from './MobileBottomNav'
+import UpgradeModal from '../payment/UpgradeModal'
 
 export default function AppLayout() {
   const location = useLocation()
@@ -120,6 +121,7 @@ useEffect(() => {
 
 {isMobile && <MobileBottomNav />}
 
-</div>
-)
+      <UpgradeModal />
+    </div>
+  )
 }

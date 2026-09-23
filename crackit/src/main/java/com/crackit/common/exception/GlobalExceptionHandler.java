@@ -11,6 +11,21 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<?> handleQuotaExceededException(QuotaExceededException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.PAYMENT_REQUIRED)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "QUOTA_EXCEEDED",
+                        "message", ex.getMessage(),
+                        "limit", ex.getLimit(),
+                        "currentUsage", ex.getCurrentUsage(),
+                        "upgradeRequired", true
+                ));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
 

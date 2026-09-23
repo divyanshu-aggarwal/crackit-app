@@ -24,4 +24,14 @@ public class AuthResponse {
     private String authProvider;
 
     private String message;
+
+    private com.crackit.payment.enums.SubscriptionTier subscriptionTier;
+
+    private String subscriptionStatus;
+
+    private Boolean isPro;
+
+    private Integer aiUsageCount;
+
+    private Integer aiUsageLimit;
 }

@@ -51,6 +51,7 @@ public class InterviewPrepService {
     private final JobApplicationRepository jobApplicationRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final Optional<InterviewPrepProducer> interviewPrepProducer;
+    private final com.crackit.payment.service.SubscriptionService subscriptionService;
 
     @Value("${kafka.enabled:true}")
     private boolean kafkaEnabled;
@@ -63,6 +64,8 @@ public class InterviewPrepService {
 
     public InterviewPrepResponse generatePrep(String jobId) {
         User user = getLoggedInUser();
+        subscriptionService.checkAndIncrementAiQuota(user);
+
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));
         JdAnalysis analysis = jdAnalysisRepository.findTopByJobIdOrderByCreatedAtDesc(jobId)

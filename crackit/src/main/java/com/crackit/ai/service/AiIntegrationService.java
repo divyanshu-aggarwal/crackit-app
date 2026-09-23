@@ -43,6 +43,7 @@ public class AiIntegrationService {
     private final ProjectRepository projectRepository;
     private final TailoredResumeRepository tailoredResumeRepository;
     private final UserRepository userRepository;
+    private final com.crackit.payment.service.SubscriptionService subscriptionService;
 
     public SavedJdAnalysisResponse analyzeJob(String jobId) {
 
@@ -54,6 +55,7 @@ public class AiIntegrationService {
         }
 
         User user = job.getUser();
+        subscriptionService.checkAndIncrementAiQuota(user);
 
         MasterResume masterResume = masterResumeRepository.findByUserId(user.getId())
                 .stream().findFirst().orElse(null);
@@ -227,6 +229,7 @@ public class AiIntegrationService {
 
     public JDAnalysisResponse quickScan(String jdText) {
         User user = getLoggedInUser();
+        subscriptionService.checkAndIncrementAiQuota(user);
 
         MasterResume masterResume = masterResumeRepository.findByUserId(user.getId())
                 .stream().findFirst().orElse(null);

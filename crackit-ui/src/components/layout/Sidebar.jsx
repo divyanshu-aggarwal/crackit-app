@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import ProBadge from '../ui/ProBadge'
 
 const links = [
   { to: '/dashboard', label: 'Dashboard', icon: 'ti-layout-dashboard' },
@@ -145,7 +146,7 @@ export default function Sidebar({
   onToggle,
   onClose
 }) {
-  const { logout, user } = useAuth()
+  const { logout, user, isPro, aiUsageCount, openUpgradeModal } = useAuth()
 
   const navigate = useNavigate()
 
@@ -412,13 +413,72 @@ style={{
       </div>
 
       {/* Profile */}
-<div
-  ref={dropdownRef}
-  style={{
-    position: 'relative',
-    flexShrink: 0
-  }}
->
+      <div
+        ref={dropdownRef}
+        style={{
+          position: 'relative',
+          flexShrink: 0
+        }}
+      >
+        {expanded && !isPro && (
+          <div
+            onClick={openUpgradeModal}
+            style={{
+              margin: '0 4px 6px',
+              padding: '10px 12px',
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(236, 72, 153, 0.10) 100%)',
+              border: '1px solid rgba(124, 58, 237, 0.22)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(124, 58, 237, 0.18) 0%, rgba(236, 72, 153, 0.16) 100%)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(236, 72, 153, 0.10) 100%)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 12.5, color: '#6d28d9' }}>
+                <i className="ti ti-crown" style={{ fontSize: 14, color: '#f59e0b' }} />
+                <span>Crackit Pro</span>
+              </div>
+              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#7c3aed', background: '#ffffff', padding: '2px 6px', borderRadius: 9999, border: '1px solid rgba(124,58,237,0.2)' }}>
+                UPGRADE
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>
+              {aiUsageCount >= 3 ? 'Free AI credits exhausted' : `${aiUsageCount}/3 free AI scans used`}
+            </div>
+          </div>
+        )}
+
+        {!expanded && !isPro && (
+          <button
+            onClick={openUpgradeModal}
+            title="Upgrade to Pro"
+            style={{
+              width: 36,
+              height: 36,
+              margin: '0 auto 6px',
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
+              border: '1px solid rgba(124, 58, 237, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#d97706'
+            }}
+          >
+            <i className="ti ti-crown" style={{ fontSize: 17 }} />
+          </button>
+        )}
+
         <Divider />
 
         <button
@@ -506,31 +566,28 @@ style={{
                 <div
                   style={{
                     fontSize: 14,
-
                     color: '#1a1040',
-
                     fontWeight: 800,
-
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
                     whiteSpace: 'nowrap',
-
                     overflow: 'hidden',
-
                     textOverflow: 'ellipsis'
                   }}
                 >
-                  {firstName}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstName}</span>
+                  {isPro && <ProBadge size="sm" />}
                 </div>
 
                 <div
                   style={{
                     fontSize: 12,
-
-                    color: '#9b8ec4',
-
-                    fontWeight: 500
+                    color: isPro ? '#d97706' : '#9b8ec4',
+                    fontWeight: isPro ? 700 : 500
                   }}
                 >
-                  Job Seeker
+                  {isPro ? 'Pro Member' : 'Free Tier'}
                 </div>
               </div>
 
@@ -600,6 +657,19 @@ style={{
               label="My Resume"
               onClick={() => {
                 navigate('/resume')
+                setDropdownOpen(false)
+
+                if (tablet && onClose) {
+                  onClose()
+                }
+              }}
+            />
+
+            <DropdownItem
+              icon="ti-crown"
+              label={isPro ? "Pro Membership & Plans" : "Upgrade to Pro"}
+              onClick={() => {
+                openUpgradeModal()
                 setDropdownOpen(false)
 
                 if (tablet && onClose) {

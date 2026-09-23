@@ -1,5 +1,6 @@
 package com.crackit.auth.entity;
 
+import com.crackit.payment.enums.SubscriptionTier;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -72,4 +73,20 @@ public class User {
 
     @Column(name = "github_url", length = 200)
     private String githubUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_tier", length = 20)
+    @Builder.Default
+    private SubscriptionTier subscriptionTier = SubscriptionTier.FREE;
+
+    @Column(name = "subscription_status", length = 20)
+    @Builder.Default
+    private String subscriptionStatus = "ACTIVE";
+
+    @Column(name = "subscription_expires_at")
+    private LocalDateTime subscriptionExpiresAt;
+
+    @Column(name = "ai_usage_count")
+    @Builder.Default
+    private Integer aiUsageCount = 0;
 }

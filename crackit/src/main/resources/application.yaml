@@ -74,3 +74,10 @@ geodb:
   api:
     key: ${GEODB_API_KEY:your_geodb_api_key}
     host: ${GEODB_API_HOST:wft-geo-db.p.rapidapi.com}
+
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:}
+    secret: ${RAZORPAY_KEY_SECRET:}
+  mock-mode: ${RAZORPAY_MOCK_MODE:true}
+

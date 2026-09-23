@@ -8,6 +8,7 @@ import com.crackit.auth.entity.User;
 import com.crackit.auth.enums.Role;
 import com.crackit.auth.repository.UserRepository;
 import com.crackit.auth.security.JwtUtil;
+import com.crackit.payment.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
+    private final SubscriptionService subscriptionService;
 
     public AuthResponse signup(SignupRequest request) {
         String cleanEmail = request.getEmail().trim().toLowerCase();
@@ -49,20 +51,7 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(user);
-
-        String roleName = savedUser.getRole() != null ? savedUser.getRole().name() : "ROLE_USER";
-        String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getEmail(), roleName);
-
-        return AuthResponse.builder()
-                .token(token)
-                .userId(savedUser.getId())
-                .fullName(savedUser.getFullName())
-                .email(savedUser.getEmail())
-                .role(roleName)
-                .authProvider(savedUser.getAuthProvider())
-                .avatarUrl(savedUser.getAvatarUrl())
-                .message("Signup successful")
-                .build();
+        return buildAuthResponse(savedUser, "Signup successful");
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -80,19 +69,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
-        String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), roleName);
-
-        return AuthResponse.builder()
-                .token(token)
-                .userId(user.getId())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .role(roleName)
-                .authProvider(user.getAuthProvider())
-                .avatarUrl(user.getAvatarUrl())
-                .message("Login successful")
-                .build();
+        return buildAuthResponse(user, "Login successful");
     }
 
     @SuppressWarnings("unchecked")
@@ -146,20 +123,7 @@ public class AuthService {
             }
 
             User savedUser = userRepository.save(user);
-
-            String roleName = savedUser.getRole() != null ? savedUser.getRole().name() : "ROLE_USER";
-            String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getEmail(), roleName);
-
-            return AuthResponse.builder()
-                    .token(token)
-                    .userId(savedUser.getId())
-                    .fullName(savedUser.getFullName())
-                    .email(savedUser.getEmail())
-                    .role(roleName)
-                    .authProvider("GOOGLE")
-                    .avatarUrl(savedUser.getAvatarUrl())
-                    .message("Google authentication successful")
-                    .build();
+            return buildAuthResponse(savedUser, "Google authentication successful");
 
         } catch (ResponseStatusException rse) {
             throw rse;
@@ -167,5 +131,28 @@ public class AuthService {
             log.error("[AUTH] Google authentication verification failed: {}", ex.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google authentication failed: " + ex.getMessage());
         }
+    }
+
+    private AuthResponse buildAuthResponse(User user, String message) {
+        String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), roleName);
+        boolean proActive = subscriptionService.isProActive(user);
+        int currentUsage = user.getAiUsageCount() != null ? user.getAiUsageCount() : 0;
+
+        return AuthResponse.builder()
+                .token(token)
+                .userId(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(roleName)
+                .authProvider(user.getAuthProvider())
+                .avatarUrl(user.getAvatarUrl())
+                .subscriptionTier(user.getSubscriptionTier())
+                .subscriptionStatus(user.getSubscriptionStatus())
+                .isPro(proActive)
+                .aiUsageCount(currentUsage)
+                .aiUsageLimit(proActive ? -1 : SubscriptionService.FREE_AI_LIMIT)
+                .message(message)
+                .build();
     }
 }

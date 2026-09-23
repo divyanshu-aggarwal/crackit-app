@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import PageHeader from '../components/ui/PageHeader'
 import { API_BASE_URL } from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import ProBadge from '../components/ui/ProBadge';
 
 const API = `${API_BASE_URL}/api`;
 const token = () => localStorage.getItem("token");
@@ -10,6 +12,7 @@ const authHeaders = () => ({
 });
 
 export default function ProfilePage() {
+  const { openUpgradeModal, isDevAdmin } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingPersonal, setEditingPersonal] = useState(false);
@@ -71,6 +74,24 @@ export default function ProfilePage() {
   const saveCareer = async () => {
     await saveSection(careerForm);
     setEditingCareer(false);
+  };
+
+  const resetToFree = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/payments/reset-tier`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        await fetchProfile();
+        setSavedMsg("Reset to Free Tier!");
+        setTimeout(() => setSavedMsg(""), 2500);
+      }
+    } catch (e) {
+      console.error("Failed to reset tier:", e);
+    }
+    setSaving(false);
   };
 
   const initials = profile?.fullName
@@ -255,7 +276,10 @@ export default function ProfilePage() {
             <div className="profile-card profile-header-card">
               <div className="profile-big-avatar">{initials}</div>
               <div className="profile-header-info">
-                <p className="profile-page-name">{profile?.fullName || "—"}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 0.2rem' }}>
+                  <p className="profile-page-name" style={{ margin: 0 }}>{profile?.fullName || "—"}</p>
+                  {(profile?.isPro || profile?.subscriptionTier === 'PRO') && <ProBadge size="lg" />}
+                </div>
                 <p className="profile-page-email">{profile?.email}</p>
                 {(profile?.currentRole || profile?.currentCompany) && (
                   <p className="profile-page-role">
@@ -270,6 +294,146 @@ export default function ProfilePage() {
                   <i className="ti ti-check" /> {savedMsg}
                 </div>
               )}
+            </div>
+
+            {/* Subscription & Membership Card */}
+            <div className="profile-card" style={{
+              background: (profile?.isPro || profile?.subscriptionTier === 'PRO')
+                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)'
+                : 'linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, rgba(236, 72, 153, 0.03) 100%)',
+              border: (profile?.isPro || profile?.subscriptionTier === 'PRO')
+                ? '1px solid rgba(245, 158, 11, 0.3)'
+                : '1px solid rgba(124, 58, 237, 0.15)'
+            }}>
+              <div className="profile-card-header" style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 10,
+                    background: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#fef3c7' : '#f3e8ff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <i className="ti ti-crown" style={{
+                      fontSize: 18,
+                      color: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#d97706' : '#7c3aed'
+                    }} />
+                  </div>
+                  <h2>Membership & Subscription</h2>
+                </div>
+
+                {!(profile?.isPro || profile?.subscriptionTier === 'PRO') ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={openUpgradeModal}
+                      className="btn-primary"
+                      style={{
+                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                        padding: '0.45rem 1rem',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <i className="ti ti-bolt" /> Upgrade to Pro (₹299/mo)
+                    </button>
+                    {isDevAdmin && (
+                      <button
+                        onClick={resetToFree}
+                        disabled={saving}
+                        className="btn-ghost"
+                        style={{
+                          padding: '0.4rem 0.85rem',
+                          fontSize: '0.82rem',
+                          color: '#6b7280',
+                          borderColor: '#e5e7eb',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                        title="Reset credits to 0/3 (Admin Only)"
+                      >
+                        <i className="ti ti-rotate" /> Reset 0/3 Credits
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, color: '#059669',
+                      background: '#ecfdf5', padding: '4px 10px', borderRadius: 9999,
+                      border: '1px solid #a7f3d0'
+                    }}>
+                      ✓ ACTIVE PRO
+                    </span>
+                    <button
+                      onClick={openUpgradeModal}
+                      className="btn-ghost"
+                      style={{
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.82rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5
+                      }}
+                    >
+                      <i className="ti ti-crown" style={{ color: '#d97706' }} /> Extend Plan
+                    </button>
+                    {isDevAdmin && (
+                      <button
+                        onClick={resetToFree}
+                        disabled={saving}
+                        className="btn-ghost"
+                        style={{
+                          padding: '0.4rem 0.85rem',
+                          fontSize: '0.82rem',
+                          color: '#dc2626',
+                          borderColor: '#fecaca',
+                          background: '#fff5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                        title="Reset to Free Tier (Admin/Dev Only)"
+                      >
+                        <i className="ti ti-rotate" /> Reset to Free Tier
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="profile-grid">
+                <div className="profile-field">
+                  <span className="profile-field-label">Current Tier</span>
+                  <span className="profile-field-value" style={{ fontWeight: 700, color: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#d97706' : '#1a1040' }}>
+                    {(profile?.isPro || profile?.subscriptionTier === 'PRO') ? '👑 Crackit Pro Member' : 'Free Tier'}
+                  </span>
+                </div>
+
+                <div className="profile-field">
+                  <span className="profile-field-label">AI Generations</span>
+                  <span className="profile-field-value">
+                    {(profile?.isPro || profile?.subscriptionTier === 'PRO')
+                      ? '✨ Unlimited Access'
+                      : `${profile?.aiUsageCount || 0} of 3 free scans used`
+                    }
+                  </span>
+                </div>
+
+                <div className="profile-field">
+                  <span className="profile-field-label">Interview Prep Access</span>
+                  <span className="profile-field-value">
+                    {(profile?.isPro || profile?.subscriptionTier === 'PRO') ? 'Full Kafka-driven AI Simulations' : 'Basic Preview'}
+                  </span>
+                </div>
+
+                <div className="profile-field">
+                  <span className="profile-field-label">Validity</span>
+                  <span className="profile-field-value">
+                    {profile?.subscriptionExpiresAt
+                      ? new Date(profile.subscriptionExpiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                      : 'Lifetime Free'
+                    }
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Personal details */}

@@ -4,6 +4,7 @@ import com.crackit.auth.dto.UserProfileRequest;
 import com.crackit.auth.dto.UserProfileResponse;
 import com.crackit.auth.entity.User;
 import com.crackit.auth.repository.UserRepository;
+import com.crackit.payment.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final SubscriptionService subscriptionService;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -43,6 +45,9 @@ public class UserController {
     }
 
     private UserProfileResponse toResponse(User user) {
+        boolean proActive = subscriptionService.isProActive(user);
+        int currentUsage = user.getAiUsageCount() != null ? user.getAiUsageCount() : 0;
+
         return UserProfileResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
@@ -54,6 +59,13 @@ public class UserController {
                 .yearsExperience(user.getYearsExperience())
                 .currentCompany(user.getCurrentCompany())
                 .currentRole(user.getCurrentRole())
+                .subscriptionTier(user.getSubscriptionTier())
+                .subscriptionStatus(user.getSubscriptionStatus())
+                .subscriptionExpiresAt(user.getSubscriptionExpiresAt())
+                .aiUsageCount(currentUsage)
+                .aiUsageLimit(proActive ? -1 : SubscriptionService.FREE_AI_LIMIT)
+                .isPro(proActive)
+                .role(user.getRole() != null ? user.getRole().name() : "ROLE_USER")
                 .build();
     }
 }

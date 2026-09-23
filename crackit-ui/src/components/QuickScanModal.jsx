@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -118,10 +119,12 @@ export default function QuickScanModal({
   onClose,
   onSaveAsJob,
 }) {
+  const { openUpgradeModal, isPro, aiUsageCount, refreshProfile } = useAuth();
   const [jdText, setJdText] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
   const handleScan = async () => {
     if (!jdText.trim()) return;
@@ -129,6 +132,7 @@ export default function QuickScanModal({
     setScanning(true);
     setError("");
     setResult(null);
+    setQuotaExceeded(false);
 
     try {
       const res = await fetch(`${API}/ai/quick-scan`, {
@@ -139,8 +143,15 @@ export default function QuickScanModal({
 
       if (res.ok) {
         setResult(await res.json());
+        if (refreshProfile) refreshProfile();
       } else {
-        setError("Scan failed. Make sure your resume is uploaded.");
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 402 || errData.error === 'QUOTA_EXCEEDED' || errData.upgradeRequired) {
+          setError(errData.message || "You have reached your limit of 3 free AI generations. Upgrade to Pro for unlimited AI features.");
+          setQuotaExceeded(true);
+        } else {
+          setError(errData.message || "Scan failed. Make sure your resume is uploaded.");
+        }
       }
     } catch (e) {
       setError("Something went wrong. Try again.");
@@ -537,6 +548,22 @@ export default function QuickScanModal({
           </div>
 
           <div className="qs-body">
+            {!isPro && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, fontSize: 12, color: '#7c6faa' }}>
+                <span>Free Plan: <strong style={{ color: aiUsageCount >= 3 ? '#ef4444' : '#6d28d9' }}>{aiUsageCount}/3</strong> free AI scans used</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openUpgradeModal();
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  ⚡ Upgrade to Unlimited
+                </button>
+              </div>
+            )}
+
             <textarea
               className="qs-textarea"
               placeholder={`Paste the job description here...
@@ -548,13 +575,39 @@ e.g. We are looking for a Senior Java Backend Engineer with 3+ years of experien
             />
 
             {error && (
-              <div className="qs-error">
-                <i
-                  className="ti ti-alert-circle"
-                  style={{ fontSize: 14 }}
-                />
-
-                {error}
+              <div className="qs-error" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <i
+                    className="ti ti-alert-circle"
+                    style={{ fontSize: 14 }}
+                  />
+                  <span>{error}</span>
+                </div>
+                {quotaExceeded && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      openUpgradeModal();
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 10,
+                      background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                    }}
+                  >
+                    <i className="ti ti-crown" /> Upgrade to Pro for Unlimited Scans
+                  </button>
+                )}
               </div>
             )}
 

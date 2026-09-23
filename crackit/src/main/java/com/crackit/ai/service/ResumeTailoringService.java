@@ -44,9 +44,11 @@ public class ResumeTailoringService {
     private final AiServiceClient aiServiceClient;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final com.crackit.payment.service.SubscriptionService subscriptionService;
 
     public SavedTailoredResumeResponse tailorResume(String jobId) {
         User user = getLoggedInUser();
+        subscriptionService.checkAndIncrementAiQuota(user);
 
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));
