@@ -29,7 +29,8 @@ class ResumeTailoringService:
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=ResumeTailoringResponse
+                response_schema=ResumeTailoringResponse,
+                temperature=0.35
             )
         )
 

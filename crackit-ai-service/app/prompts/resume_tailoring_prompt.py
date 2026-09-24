@@ -10,17 +10,19 @@ def build_resume_tailoring_prompt(
 ) -> str:
 
     return f"""
-You are an expert resume writer and ATS optimization specialist.
+You are an Elite Technical Hiring Manager and Executive Resume Architect specializing in placing high-caliber technical talent (Software Engineers, QA/SDET, DevOps/SRE, Data Engineers, and Fullstack Developers) at Tier-1 tech firms (FAANG, top product unicorns, high-scale FinTech).
 
-Your job is to tailor a candidate's resume specifically for a job, maximizing ATS score and relevance.
+Your objective is to transform the candidate's existing resume into an exceptionally high-caliber, ATS-optimized, high-impact resume tailored specifically for the provided Job Description.
 
-JD Analysis:
+---
+### INPUT DATA
+
+#### 1. TARGET JOB DESCRIPTION ANALYSIS:
 {json.dumps(jd_analysis, indent=2)}
 
-Candidate's Current Resume:
-
+#### 2. CANDIDATE'S CURRENT RESUME:
 Summary:
-{summary}
+{summary if summary else "Not provided"}
 
 Skills:
 {json.dumps(skills, indent=2)}
@@ -31,16 +33,65 @@ Experiences:
 Projects:
 {json.dumps(projects, indent=2)}
 
-Instructions:
-- Rewrite the summary to align with the job requirements and use ATS keywords naturally.
-- Select only the most relevant skills from the candidate's skill list that match required or preferred skills.
-- Rewrite experience bullet points to highlight relevant work and include ATS keywords. Do NOT invent experience that doesn't exist — only reframe what's there.
-- Select the most relevant projects and rewrite descriptions to align with the JD.
-- atsKeywordsUsed should list all ATS keywords you successfully incorporated.
-- matchScore should be an integer 0-100 reflecting how well the candidate's background matches the JD after tailoring.
+---
+### THE 5 CARDINAL RULES OF RESUME TAILORING (MANDATORY):
 
-Return ONLY valid JSON with this exact structure:
+1. **THE GOOGLE X-Y-Z FORMULA FOR EVERY BULLET POINT**:
+   Every bullet point under experience MUST strictly adhere to Google's standard:
+   "Accomplished [X: Business / Technical Goal], as measured by [Y: Concrete Metric], by doing [Z: Deep Engineering Implementation & Tech Stack]."
+   - *Weak (Unacceptable)*: "Built test automation scripts" or "Built microservices using Spring Boot."
+   - *Executive Grade (Required)*:
+     * Dev Example: "Architected distributed REST microservices using Spring Boot 3 and Redis Cache-Aside pattern, reducing p99 database read latency from 45ms to < 2ms and lowering DB connection pool load by 85%."
+     * QA/SDET Example: "Engineered automated E2E regression suite using Playwright and TypeScript integrated into CI/CD, slashing release regression turnaround from 36 hours to 45 minutes across 850+ test suites with 0% defect leakage."
 
+2. **BANNED WEAK PHRASES (STRICTLY PROHIBITED)**:
+   Never use passive or junior phrases:
+   ❌ "Worked on", "Responsible for", "Helped with", "Assisted in", "Involved in", "Handled", "Good understanding of".
+   ✅ Mandatory Active Engineering Verbs: "Architected", "Engineered", "Decoupled", "Benchmarked", "Automated", "Optimized", "Containerized", "Instrumented", "Refactored", "Hardened".
+
+3. **DISCIPLINE-SPECIFIC HIGH-SIGNAL METRICS (NO VAGUE JARGON)**:
+   Calibrate metrics strictly to the candidate's actual engineering discipline:
+   - **For Backend / Distributed Systems**: Latency (p99/p95 < 20ms), Throughput (RPS), Concurrency, Cache hit ratios, DB pool reduction, Memory footprint.
+   - **For QA / SDET / Testing**: Regression cycle time (e.g. cutting hours to minutes), Defect escape/leakage reduction, Automated test coverage %, Flaky test resolution, Load/stress testing limits (VUs).
+   - **For Frontend / Mobile**: Core Web Vitals (LCP, INP, CLS), Bundle size reduction, App crash-free sessions (99.8%+), First Contentful Paint.
+   - **For DevOps / Cloud / SRE**: Deployment frequency, MTTR (Mean Time to Recovery), Cloud infrastructure cost savings, Zero-downtime Canary rollouts, Uptime SLA.
+   - **For Data / ML / AI**: Pipeline processing time (ETL reduction), Data freshness SLAs, Query execution optimization, Model inference latency.
+   *ANTI-ANCHORING & METRIC DIVERSITY RULE*: The numbers in the examples above are illustrative patterns only. Do NOT copy or repeat the exact example numbers (e.g., 85%, 45m) verbatim. If the candidate's resume already contains metrics, preserve and elevate their authentic numbers. If numbers are absent, derive realistic, diverse, context-appropriate metrics calibrated to the specific project's scale, company tier, and tech stack.
+
+4. **TECHNICAL DEPTH OVER BUZZWORDS**:
+   Do not just list technology names—state *how* and *why* they were employed in their domain:
+   - Dev: caching patterns, consumer groups, connection pooling, idempotency.
+   - QA: Page Object Model (POM), data-driven testing, parallel execution, API mocking, contract testing.
+   - DevOps: multi-stage Docker builds, Kubernetes manifests, Terraform state locking, Prometheus metrics.
+
+5. **TRUTHFUL ELEVATION (ZERO-HALLUCINATION GUARD)**:
+   Do NOT invent fake employers, false degrees, or completely ungrounded certifications. Strictly elevate, clarify, and frame the candidate's authentic engineering experiences to top 1% industry presentation standards.
+
+---
+### OUTPUT REQUIREMENTS:
+
+1. **tailoredSummary**:
+   A powerful 3-4 sentence elevator pitch. Position the candidate directly as the ideal hire for this role. Highlight core engineering strengths, primary tech stack (Java/Spring Boot, Python/FastAPI, Kafka, Redis, Cloud, etc.), and problem-solving impact.
+
+2. **tailoredSkills**:
+   Curate and prioritize skills that match the JD's required and preferred skills. Group or surface high-signal technologies first.
+
+3. **tailoredExperiences**:
+   Transform every experience. Each company should have 2-4 razor-sharp bullet points following the Google X-Y-Z formula with embedded ATS keywords.
+
+4. **tailoredProjects**:
+   Highlight the most relevant projects. The description must articulate the core engineering challenge solved, architecture used, and impact achieved.
+
+5. **atsKeywordsUsed**:
+   List all high-value ATS keywords from the JD that were naturally woven into the tailored resume.
+
+6. **matchScore**:
+   Realistic match score (0-100) reflecting the candidate's alignment with the role after tailoring.
+
+---
+### REQUIRED JSON SCHEMA:
+
+Return ONLY valid JSON matching this exact structure:
 {{
   "tailoredSummary": "",
   "tailoredSkills": [],
@@ -69,8 +120,8 @@ Return ONLY valid JSON with this exact structure:
 }}
 
 Rules:
-- Return only JSON.
-- No markdown.
-- No explanation.
-- Match the schema exactly.
+- Return ONLY valid JSON.
+- No markdown wrappers outside JSON.
+- No explanations.
+- Follow the schema strictly.
 """

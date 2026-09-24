@@ -29,7 +29,8 @@ class JDAnalyzerService:
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=JDAnalysisResponse
+                response_schema=JDAnalysisResponse,
+                temperature=0.3
             )
         )
 

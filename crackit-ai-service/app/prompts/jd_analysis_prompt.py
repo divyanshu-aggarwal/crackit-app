@@ -29,24 +29,57 @@ Projects:
 {json.dumps([p.dict() if hasattr(p, 'dict') else p for p in projects], indent=2)}
 """
 
-    match_score_instruction = """
-matchScore:
-- Integer 0 to 100
-- Based on how well the candidate's full profile matches the job
-- Consider: skill overlap, experience relevance and seniority, project tech stack alignment, summary domain match
-- Weight: required skills 40%, experience 35%, projects 15%, summary 10%
-- If no resume provided, return 0
-""" if has_resume else "matchScore: return 0 as no resume was provided"
-
     return f"""
-You are an expert technical recruiter and ATS optimization specialist.
+You are a Staff Technical Recruiter and Principal Software Engineering Hiring Manager.
 
-Analyze the following job description and evaluate the candidate's fit.
+Perform a rigorous, production-grade architectural analysis of the Job Description and evaluate the candidate's alignment.
 
 {resume_section}
 
-Return ONLY valid JSON with this exact structure:
+---
+### ANALYSIS INSTRUCTIONS:
 
+1. **requiredSkills**:
+   Extract core, mandatory technical skills (languages, frameworks, distributed systems, databases). Omit non-technical generic buzzwords like "communication" or "team player".
+
+2. **preferredSkills**:
+   Extract secondary or "nice-to-have" skills (cloud tools, DevOps, monitoring, specific niche libraries).
+
+3. **experienceLevel**:
+   Normalized seniority level: "Entry", "Junior", "Mid-Level", "Senior", "Lead", or "Principal/Staff".
+
+4. **importantTopics**:
+   Identify 6 to 10 deep, role-specific technical and architectural topics the candidate will be grilled on in technical rounds for this role.
+   Do NOT output trivial generic words like "Java" or "Testing".
+   Calibrate to the role's actual domain:
+   - For Backend: "Distributed In-Memory Caching & Cache-Aside Invalidation", "Event-Driven Microservices & Kafka Partition Strategy", "Relational Query Execution Plans & Index Optimization", "Concurrency & Thread Safety".
+   - For QA/SDET: "E2E Test Architecture (Page Object Model)", "Parallel Test Execution & CI/CD Pipeline Gates", "Flaky Test Detection & Quarantining", "API Mocking, Contract Testing & Service Virtualization", "Performance/Load Testing & Bottleneck Identification".
+   - For Frontend/Mobile: "Core Web Vitals & Render Pipeline Performance", "Client-Side Caching & State Management", "Micro-Frontends & Module Federation", "Network Payload & Bundle Splitting".
+   - For DevOps/SRE: "Zero-Downtime Deployment Strategies (Canary/Blue-Green)", "Infrastructure-as-Code State Management", "Observability (Distributed Tracing, Prometheus, SLIs/SLOs)", "Kubernetes Pod Auto-scaling & Resource Quotas".
+
+5. **summary**:
+   Provide a high-signal, 3-part executive analysis (formatted cleanly with markdown bolding):
+   - **Role Scope & Bar**: Brief synthesis of the role's mission, team expectations, and tech stack scale.
+   - **Candidate Gap Analysis**: Explicitly call out:
+     * *Direct Strengths*: Where candidate matches 100%.
+     * *Transferable Skills*: Where candidate has adjacent experience (e.g. RabbitMQ -> Kafka, Postgres -> MySQL).
+     * *Critical Gaps (Dealbreakers)*: Missing must-have technologies that interviewers will target.
+   - **48-Hour Strategic Action Plan**: 2-3 high-impact concepts or portfolio features the candidate must review before interviewing.
+
+6. **matchScore**:
+   Rigorous integer 0 to 100:
+   - 80-100: Strong candidate meeting all required tech + proven relevant scale.
+   - 60-79: Promising candidate with transferable skills but notable gaps in 1-2 core technologies.
+   - Below 60: Major mismatch in core stack or seniority bar.
+   - If no resume provided, return 0.
+
+7. **atsKeywords**:
+   List the top 12-18 most critical ATS keywords from the JD (technologies, protocols, architecture patterns) needed for resume screening.
+
+---
+### OUTPUT SCHEMA:
+
+Return ONLY valid JSON with this exact structure:
 {{
   "requiredSkills": [],
   "preferredSkills": [],
@@ -57,14 +90,11 @@ Return ONLY valid JSON with this exact structure:
   "matchScore": 0
 }}
 
-{match_score_instruction}
-
 Rules:
-- Return only JSON.
-- No markdown.
-- No explanation.
-- Match the schema exactly.
-- Experience level should be Valid one word experience
+- Return ONLY valid JSON.
+- No markdown wrappers outside JSON.
+- No explanations.
+- Follow the schema strictly.
 
 Job Description:
 {jd_text}
