@@ -68,6 +68,9 @@
 │  - Authentication & JWT Security                       │
 │  - Job Discovery & Scraping Aggregators                │
 │  - Application Tracker & Master Resume Services        │
+│  - Career Prep Roadmap & Target Compatibility Engine   │
+│  - Distributed Rate Limiter & Quota Enforcement        │
+│  - Idempotent Webhook Payment Processing               │
 └────────────┬─────────────────────────────┬─────────────┘
              │                             │
     Event Streaming               Direct HTTP Proxy
@@ -76,18 +79,36 @@
 ┌─────────────────────────┐   ┌──────────────────────────┐
 │   Apache Kafka (KRaft)  │   │  AI Service (FastAPI)    │
 │        Port: 9092       │   │        Port: 8000        │
-│   Topics:               │   │  - Google Gemini LLM     │
+│   Topics:               │   │  - Google Gemini 2.5     │
 │   - interview-prep-req  │   │  - PDF/DOCX Parsing      │
 │   - interview-prep-resp │   │  - Resume Tailoring      │
+│   - roadmap-events      │   │  - Career Roadmap Engine │
 └────────────┬────────────┘   └──────────────────────────┘
              │
              ▼
-┌─────────────────────────┐
-│  MySQL Database (8.0)   │
-│        Port: 3306       │
-│  DB: job_assistant      │
-└─────────────────────────┘
+┌─────────────────────────┐   ┌──────────────────────────┐
+│  TiDB Cloud Serverless  │   │  Upstash Redis In-Memory │
+│  (Distributed HTAP)     │   │  (Sliding Window Log &   │
+│        Port: 4000       │   │   Cache-Aside Pattern)   │
+└─────────────────────────┘   └──────────────────────────┘
 ```
+
+---
+
+## 📚 Architecture & System Design Deep Dives
+
+Detailed architectural blueprints and Staff/Principal system design guides documenting CrackIt's production design choices:
+
+* **[🏛️ Master End-to-End System Design Blueprint](SYSTEM_DESIGN_BLUEPRINT.md)**: Unified Staff/Principal blueprint covering global topology, sync vs. async boundaries, distributed guarantees, \$0/month zero-cost engineering, and the top 10 interview questions with model answers.
+* **[🛡️ Distributed Rate Limiting Guide](DISTRIBUTED_RATE_LIMITING_GUIDE.md)**: Redis Sliding Window Log with atomic Lua script, Spring AOP `@RateLimit` annotations, and fail-open resilience.
+* **[🤖 AI Integration Architecture Guide](AI_INTEGRATION_ARCHITECTURE_GUIDE.md)**: Google X-Y-Z formula, anti-anchoring metric diversity, and discipline-adaptive prompt rubrics.
+* **[🗺️ Career Prep Roadmap Architecture](CAREER_ROADMAP_ARCHITECTURE_GUIDE.md)**: Dynamic multi-week milestones, target company cultural/skill compatibility matrices, and cold-start onboarding.
+* **[💳 Payment Gateway & Idempotency Guide](PAYMENT_GATEWAY_ARCHITECTURE_GUIDE.md)**: Razorpay checkout integration, cryptographic HMAC-SHA256 signature verification, and atomic state deduplication.
+* **[⚡ Redis Cache Architecture Guide](REDIS_CACHE_ARCHITECTURE_GUIDE.md)**: Cache-Aside pattern, TTL jitter against cache stampedes, and negative caching.
+* **[📨 Kafka Event Streaming Guide](KAFKA_ARCHITECTURE_GUIDE.md)**: Event-driven architecture, producer idempotence, consumer offset management, and dead-letter queues.
+* **[🔐 Authentication & Security Guide](AUTH_ARCHITECTURE_GUIDE.md)**: Stateless JWT authentication, RBAC, Google OAuth2 integration, and token revocation.
+
+---
 
 ---
 
