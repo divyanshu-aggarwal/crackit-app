@@ -11,6 +11,61 @@ const shimmer = `
     animation: shimmer 1.4s ease-in-out infinite;
     border-radius: 6px;
   }
+  .skeleton-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .skeleton-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    gap: 16px;
+  }
+  .skeleton-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .skeleton-donut-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .skeleton-search-bar {
+    background: #fff;
+    border-radius: 14px;
+    padding: 0.875rem 1rem;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+  }
+  @media (max-width: 768px) {
+    .skeleton-grid-2 {
+      grid-template-columns: 1fr !important;
+    }
+    .skeleton-header-flex {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      margin-bottom: 20px !important;
+    }
+    .skeleton-header-actions {
+      width: 100% !important;
+      justify-content: flex-start !important;
+    }
+    .skeleton-donut-row {
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 16px !important;
+    }
+    .skeleton-search-bar {
+      flex-direction: column !important;
+    }
+    .skeleton-search-bar > * {
+      width: 100% !important;
+    }
+  }
 `;
 
 function SkeletonBox({ width = "100%", height = 16, radius = 6, style = {} }) {
@@ -41,19 +96,19 @@ export function JobsSkeleton() {
       <style>{shimmer}</style>
       <div style={{ maxWidth: 900 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div className="skeleton-header-flex">
           <div>
             <SkeletonBox width={80} height={28} style={{ marginBottom: 8 }} />
             <SkeletonBox width={120} height={14} />
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="skeleton-header-actions">
             <SkeletonBox width={100} height={40} radius={18} />
             <SkeletonBox width={130} height={40} radius={18} />
           </div>
         </div>
 
         {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="skeleton-grid-2" style={{ gap: 14 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
@@ -111,24 +166,24 @@ export function DashboardSkeleton() {
       <style>{shimmer}</style>
       <div style={{ maxWidth: 940 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 32 }}>
+        <div className="skeleton-header-flex" style={{ marginBottom: 32 }}>
           <div>
             <SkeletonBox width={200} height={28} style={{ marginBottom: 8 }} />
             <SkeletonBox width={250} height={16} />
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="skeleton-header-actions">
             <SkeletonBox width={155} height={40} radius={22} />
             <SkeletonBox width={140} height={40} radius={18} />
           </div>
         </div>
 
         {/* Row 1 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div className="skeleton-grid-2" style={{ marginBottom: 16 }}>
           <SkeletonCard>
             <SkeletonBox width="50%" height={16} style={{ marginBottom: 18 }} />
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+            <div className="skeleton-donut-row">
               <SkeletonBox width={120} height={120} radius="50%" />
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, width: "100%" }}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <SkeletonBox width={10} height={10} radius="50%" />
@@ -154,7 +209,7 @@ export function DashboardSkeleton() {
         </div>
 
         {/* Row 2 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="skeleton-grid-2">
           <SkeletonCard>
             <SkeletonBox width="50%" height={16} style={{ marginBottom: 18 }} />
             {Array.from({ length: 4 }).map((_, i) => (
@@ -200,7 +255,7 @@ export function DiscoverSkeleton() {
         </div>
 
         {/* Search bar */}
-        <div style={{ background: "#fff", borderRadius: 14, padding: "0.875rem 1rem", marginBottom: 24, display: "flex", gap: 12 }}>
+        <div className="skeleton-search-bar">
           <SkeletonBox height={40} style={{ flex: 1 }} radius={8} />
           <SkeletonBox width={220} height={40} radius={8} />
           <SkeletonBox width={90} height={40} radius={8} />
@@ -208,7 +263,7 @@ export function DiscoverSkeleton() {
         </div>
 
         {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+        <div className="skeleton-grid-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>

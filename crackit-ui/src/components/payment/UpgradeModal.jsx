@@ -225,14 +225,15 @@ export default function UpgradeModal() {
                                 background: 'rgba(255, 255, 255, 0.25)',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                flexShrink: 0
                             }}
                         >
                             <Crown size={22} color="#fbbf24" fill="#fbbf24" />
                         </div>
                         <div>
-                            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
-                                Upgrade to Crackit Pro
+                            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span>Upgrade to Crackit Pro</span>
                             </h2>
                             <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>
                                 Supercharge your job hunt with unlimited AI power
@@ -406,15 +407,15 @@ export default function UpgradeModal() {
                                 <span>Opening Razorpay Checkout...</span>
                             </>
                         ) : isPro ? (
-                            <>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                                 <span>Extend Pro Membership • {currentPlan.price}</span>
                                 <ArrowRight size={17} />
-                            </>
+                            </span>
                         ) : (
-                            <>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                                 <span>Upgrade to Pro • {currentPlan.price}</span>
                                 <ArrowRight size={17} />
-                            </>
+                            </span>
                         )}
                     </button>
 

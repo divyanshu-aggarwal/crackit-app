@@ -496,7 +496,7 @@ export default function RoadmapPage() {
         ───────────────────────────────────────────────────────────── */
         <div style={{ maxWidth: 980, margin: "20px auto 60px" }}>
           {/* Main Hero Card */}
-          <Card style={{ padding: "48px 24px sm:padding 54px 36px", textAlign: "center", borderRadius: 28, marginBottom: 36 }}>
+          <Card style={{ padding: "clamp(36px, 5vw, 54px) clamp(20px, 4vw, 36px)", textAlign: "center", borderRadius: 28, marginBottom: 36 }}>
             <div
               style={{
                 width: 76,

@@ -250,6 +250,14 @@ export default function ProfilePage() {
             flex-direction: column !important;
             gap: 0.5rem !important;
           }
+          .profile-card-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.85rem !important;
+          }
+          .profile-card-header > div:first-child {
+            width: 100% !important;
+          }
           .btn-primary, .btn-ghost {
             width: 100% !important;
             justify-content: center !important;
@@ -306,18 +314,21 @@ export default function ProfilePage() {
                 : '1px solid rgba(124, 58, 237, 0.15)'
             }}>
               <div className="profile-card-header" style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: 10,
+                    width: 34, height: 34, borderRadius: 10,
                     background: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#fef3c7' : '#f3e8ff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     <i className="ti ti-crown" style={{
                       fontSize: 18,
                       color: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#d97706' : '#7c3aed'
                     }} />
                   </div>
-                  <h2>Membership & Subscription</h2>
+                  <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1a1040', display: 'flex', alignItems: 'center' }}>
+                    Membership & Subscription
+                  </h2>
                 </div>
 
                 {!(profile?.isPro || profile?.subscriptionTier === 'PRO') ? (
@@ -402,19 +413,31 @@ export default function ProfilePage() {
               <div className="profile-grid">
                 <div className="profile-field">
                   <span className="profile-field-label">Current Tier</span>
-                  <span className="profile-field-value" style={{ fontWeight: 700, color: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#d97706' : '#1a1040' }}>
-                    {(profile?.isPro || profile?.subscriptionTier === 'PRO') ? '👑 Crackit Pro Member' : 'Free Tier'}
-                  </span>
+                  <div className="profile-field-value" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: (profile?.isPro || profile?.subscriptionTier === 'PRO') ? '#d97706' : '#1a1040' }}>
+                    {(profile?.isPro || profile?.subscriptionTier === 'PRO') ? (
+                      <>
+                        <i className="ti ti-crown" style={{ fontSize: 16, color: '#d97706', flexShrink: 0 }} />
+                        <span>Crackit Pro Member</span>
+                        <ProBadge size="sm" />
+                      </>
+                    ) : (
+                      <span>Free Tier</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="profile-field">
                   <span className="profile-field-label">AI Generations</span>
-                  <span className="profile-field-value">
-                    {(profile?.isPro || profile?.subscriptionTier === 'PRO')
-                      ? '✨ Unlimited Access'
-                      : `${profile?.aiUsageCount || 0} of 3 free scans used`
-                    }
-                  </span>
+                  <div className="profile-field-value" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {(profile?.isPro || profile?.subscriptionTier === 'PRO') ? (
+                      <>
+                        <i className="ti ti-sparkles" style={{ fontSize: 15, color: '#7c3aed', flexShrink: 0 }} />
+                        <span>Unlimited Access</span>
+                      </>
+                    ) : (
+                      <span>{`${profile?.aiUsageCount || 0} of 3 free scans used`}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="profile-field">

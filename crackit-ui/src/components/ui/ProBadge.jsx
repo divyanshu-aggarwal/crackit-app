@@ -9,6 +9,8 @@ export default function ProBadge({ size = 'sm', variant = 'gold' }) {
             style={{
                 display: 'inline-flex',
                 alignItems: 'center',
+                verticalAlign: 'middle',
+                flexShrink: 0,
                 gap: isLg ? 6 : 4,
                 padding: isLg ? '3px 10px' : '2px 7px',
                 borderRadius: 9999,
@@ -21,11 +23,11 @@ export default function ProBadge({ size = 'sm', variant = 'gold' }) {
                 boxShadow: '0 2px 8px rgba(217, 119, 6, 0.35)',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
                 userSelect: 'none',
-                lineHeight: 1.2
+                lineHeight: 1
             }}
         >
-            <Crown size={isLg ? 13 : 11} strokeWidth={2.6} />
-            <span>PRO</span>
+            <Crown size={isLg ? 13 : 11} strokeWidth={2.6} style={{ display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ lineHeight: 1 }}>PRO</span>
         </span>
     )
 }

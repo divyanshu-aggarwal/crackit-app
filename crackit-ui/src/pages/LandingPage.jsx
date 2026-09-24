@@ -511,7 +511,7 @@ export default function LandingPage() {
             borderRadius: 28,
             border: "1px solid rgba(124, 58, 237, 0.16)",
             boxShadow: "0 20px 45px rgba(124, 58, 237, 0.08), 0 4px 12px rgba(15, 23, 42, 0.03)",
-            padding: "36px 24px sm:padding 44px 36px",
+            padding: "clamp(32px, 4vw, 44px) clamp(20px, 4vw, 36px)",
             overflow: "hidden"
           }}
         >

@@ -13,7 +13,7 @@ const mainLinks = [
 export default function MobileBottomNav() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, isPro, openUpgradeModal } = useAuth()
   const location = useLocation()
 
   const go = (path) => {
@@ -59,12 +59,21 @@ export default function MobileBottomNav() {
           <MobileMenuItem icon="ti-file-cv" label="Resume" onClick={() => go('/resume')} />
           <MobileMenuItem icon="ti-user-circle" label="Profile" onClick={() => go('/profile')} />
           <MobileMenuItem
+            icon="ti-crown"
+            label={isPro ? "Pro Membership & Plans" : "Upgrade to Pro"}
+            onClick={() => {
+              setOpen(false)
+              openUpgradeModal()
+            }}
+          />
+          <div style={{ height: 1, background: 'rgba(124,58,237,0.08)', margin: '4px 6px' }} />
+          <MobileMenuItem
             danger
             icon="ti-logout"
             label="Logout"
             onClick={() => {
               logout()
-              go('/login')
+              go('/')
             }}
           />
         </div>
@@ -162,6 +171,7 @@ function MobileMenuItem({ icon, label, onClick, danger }) {
   return (
     <button
       onClick={onClick}
+      type="button"
       style={{
         width: '100%',
         padding: '13px 14px',
@@ -173,12 +183,14 @@ function MobileMenuItem({ icon, label, onClick, danger }) {
         fontFamily: 'inherit',
         fontSize: 14,
         fontWeight: 700,
+        textAlign: 'left',
         color: danger ? '#ef4444' : '#1a1040',
-        borderRadius: 14
+        borderRadius: 14,
+        cursor: 'pointer'
       }}
     >
-      <i className={`ti ${icon}`} style={{ fontSize: 18, color: danger ? '#ef4444' : '#7c3aed' }} />
-      {label}
+      <i className={`ti ${icon}`} style={{ fontSize: 18, width: 20, textAlign: 'center', color: danger ? '#ef4444' : '#7c3aed', flexShrink: 0 }} />
+      <span style={{ textAlign: 'left', flex: 1 }}>{label}</span>
     </button>
   )
 }

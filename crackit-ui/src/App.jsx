@@ -21,7 +21,7 @@ import NotFoundPage from './pages/NotFoundPage'
 
 function PrivateRoute({ children }) {
     const { token } = useAuth()
-    return token ? children : <Navigate to="/login" />
+    return token ? children : <Navigate to="/" replace />
 }
 
 function HomeRoute() {

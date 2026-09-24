@@ -161,7 +161,7 @@ export default function Sidebar({
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   const firstName =
@@ -445,11 +445,11 @@ style={{
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 12.5, color: '#6d28d9' }}>
-                <i className="ti ti-crown" style={{ fontSize: 14, color: '#f59e0b' }} />
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 12.5, color: '#6d28d9', lineHeight: 1 }}>
+                <i className="ti ti-crown" style={{ fontSize: 14, color: '#f59e0b', lineHeight: 1 }} />
                 <span>Crackit Pro</span>
               </div>
-              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#7c3aed', background: '#ffffff', padding: '2px 6px', borderRadius: 9999, border: '1px solid rgba(124,58,237,0.2)' }}>
+              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#7c3aed', background: '#ffffff', padding: '2px 7px', borderRadius: 9999, border: '1px solid rgba(124,58,237,0.2)', lineHeight: 1 }}>
                 UPGRADE
               </span>
             </div>
@@ -573,6 +573,7 @@ style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
+                    lineHeight: 1.3,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
@@ -586,10 +587,22 @@ style={{
                   style={{
                     fontSize: 12,
                     color: isPro ? '#d97706' : '#9b8ec4',
-                    fontWeight: isPro ? 700 : 500
+                    fontWeight: isPro ? 700 : 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    lineHeight: 1.3,
+                    marginTop: 2
                   }}
                 >
-                  {isPro ? 'Pro Member' : 'Free Tier'}
+                  {isPro ? (
+                    <>
+                      <i className="ti ti-crown" style={{ fontSize: 12, color: '#d97706', flexShrink: 0 }} />
+                      <span>Pro Member</span>
+                    </>
+                  ) : (
+                    <span>Free Tier</span>
+                  )}
                 </div>
               </div>
 
@@ -712,34 +725,24 @@ function DropdownItem({
   return (
     <button
       onClick={onClick}
+      type="button"
       style={{
         display: 'flex',
         alignItems: 'center',
-
         gap: 10,
-
         padding: '11px 14px',
-
         width: '100%',
-
         background: 'transparent',
-
         border: 'none',
-
         cursor: 'pointer',
-
         fontSize: 14,
-
         color: danger
           ? '#ef4444'
           : '#1a1040',
-
         fontWeight: 600,
-
         fontFamily: 'inherit',
-
-        transition:
-          'background 0.15s ease'
+        textAlign: 'left',
+        transition: 'background 0.15s ease'
       }}
       onMouseEnter={e => {
         e.currentTarget.style.background =
@@ -755,15 +758,21 @@ function DropdownItem({
       <i
         className={`ti ${icon}`}
         style={{
-          fontSize: 15,
-
+          fontSize: 16,
+          width: 18,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           color: danger
             ? '#ef4444'
-            : '#7c3aed'
+            : '#7c3aed',
+          flexShrink: 0
         }}
       />
 
-      {label}
+      <span style={{ textAlign: 'left', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {label}
+      </span>
     </button>
   )
 }
