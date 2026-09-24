@@ -61,6 +61,9 @@ export default function RoadmapPage() {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState(0);
   const [generationError, setGenerationError] = useState(null);
+  const [expandedHints, setExpandedHints] = useState({});
+
+  const toggleHint = (key) => setExpandedHints((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // Form state for generating/updating roadmap
   const [formData, setFormData] = useState({
@@ -96,7 +99,54 @@ export default function RoadmapPage() {
 
   useEffect(() => {
     fetchCurrentRoadmap();
+    prefillFromProfile();
   }, []);
+
+  const prefillFromProfile = async () => {
+    try {
+      const [profileRes, resumeRes] = await Promise.allSettled([
+        api.get("/api/users/profile"),
+        api.get("/api/resume")
+      ]);
+
+      let prof = null;
+      let skillsStr = "";
+
+      if (profileRes.status === "fulfilled" && profileRes.value?.data) {
+        prof = profileRes.value.data;
+      }
+      if (resumeRes.status === "fulfilled" && resumeRes.value?.data) {
+        const rData = resumeRes.value.data;
+        if (rData.skills && Array.isArray(rData.skills)) {
+          skillsStr = rData.skills.map((s) => s.skillName).filter(Boolean).slice(0, 10).join(", ");
+        }
+      }
+
+      if (prof) {
+        setFormData((prev) => ({
+          ...prev,
+          currentRole: prof.currentRole || prev.currentRole,
+          yearsOfExperience: prof.yearsExperience != null ? prof.yearsExperience : prev.yearsOfExperience,
+          currentSkills: skillsStr || prev.currentSkills,
+          currentCompensation: prof.currentCtc || prev.currentCompensation,
+          targetRole: prof.targetRole || prev.targetRole,
+          targetCompensation: prof.expectedCtc || prev.targetCompensation
+        }));
+      }
+    } catch (e) {
+      console.error("Failed to prefill roadmap form from profile:", e);
+    }
+  };
+
+  const handleApplyCalibration = (adj) => {
+    if (!adj) return;
+    setFormData((prev) => ({
+      ...prev,
+      targetRole: adj.recommendedRole || prev.targetRole,
+      targetTimelineWeeks: adj.recommendedWeeks || prev.targetTimelineWeeks
+    }));
+    setShowConfigModal(true);
+  };
 
   const fetchCurrentRoadmap = async () => {
     setLoading(true);
@@ -295,6 +345,7 @@ export default function RoadmapPage() {
   };
 
   const data = roadmap?.roadmapData || {};
+  const feasibility = data.feasibility || null;
   const readiness = data.readiness || {};
   const skillGaps = data.skillGaps || {};
   const milestones = data.milestones || [];
@@ -683,6 +734,133 @@ export default function RoadmapPage() {
             </div>
           </Card>
 
+          {/* Feasibility & Reality Check Banner */}
+          {feasibility && feasibility.status !== "REALISTIC" && (
+            <div
+              style={{
+                background:
+                  feasibility.status === "IMPRACTICAL"
+                    ? "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.06) 100%)"
+                    : "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(124, 58, 237, 0.06) 100%)",
+                border:
+                  feasibility.status === "IMPRACTICAL"
+                    ? "1.5px solid rgba(239, 68, 68, 0.35)"
+                    : "1.5px solid rgba(245, 158, 11, 0.35)",
+                borderRadius: 20,
+                padding: "20px 24px",
+                marginBottom: 24,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      background: feasibility.status === "IMPRACTICAL" ? "#fee2e2" : "#fef3c7",
+                      color: feasibility.status === "IMPRACTICAL" ? "#dc2626" : "#d97706",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className={`ti ${feasibility.status === "IMPRACTICAL" ? "ti-alert-triangle" : "ti-flame"}`} />
+                  </div>
+                  <div>
+                    <h4
+                      style={{
+                        margin: 0,
+                        fontSize: 16.5,
+                        fontWeight: 800,
+                        color: feasibility.status === "IMPRACTICAL" ? "#991b1b" : "#92400e"
+                      }}
+                    >
+                      {feasibility.status === "IMPRACTICAL"
+                        ? "Reality Check: High Career Gap Risk Detected"
+                        : "Ambitious Sprint: High Prep Intensity Required"}
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: feasibility.status === "IMPRACTICAL" ? "#b91c1c" : "#b45309",
+                        fontWeight: 600
+                      }}
+                    >
+                      Feasibility Score: {feasibility.score || 45}/100 • Gap Severity: {feasibility.gapSeverity || "HIGH"}
+                    </span>
+                  </div>
+                </div>
+
+                {feasibility.suggestedAdjustment && (
+                  <button
+                    onClick={() => handleApplyCalibration(feasibility.suggestedAdjustment)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 12,
+                      background: feasibility.status === "IMPRACTICAL" ? "#dc2626" : "#7c3aed",
+                      color: "#fff",
+                      border: "none",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      boxShadow: "0 4px 14px rgba(124, 58, 237, 0.25)"
+                    }}
+                  >
+                    <i className="ti ti-adjustments-horizontal" />
+                    Apply Recommended Calibration
+                  </button>
+                )}
+              </div>
+
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13.5,
+                  color: feasibility.status === "IMPRACTICAL" ? "#7f1d1d" : "#78350f",
+                  lineHeight: 1.55
+                }}
+              >
+                {feasibility.verdict}
+              </p>
+
+              {feasibility.suggestedAdjustment && (
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: 14,
+                    padding: "12px 18px",
+                    border: "1px solid #fed7aa",
+                    fontSize: 13,
+                    color: "#334155"
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: "#0f172a" }}>💡 Recommended Calibration:</strong> Target{" "}
+                    <span style={{ color: "#7c3aed", fontWeight: 700 }}>
+                      {feasibility.suggestedAdjustment.recommendedRole}
+                    </span>{" "}
+                    in{" "}
+                    <span style={{ color: "#059669", fontWeight: 700 }}>
+                      {feasibility.suggestedAdjustment.recommendedWeeks} Weeks
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                    {feasibility.suggestedAdjustment.actionableNote}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Navigation Sub-Tabs */}
           <div
             style={{
@@ -1005,45 +1183,144 @@ export default function RoadmapPage() {
                           </button>
 
                           <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                fontSize: 15,
-                                fontWeight: 800,
-                                color: isDone ? "#64748b" : "#1a1040",
-                                textDecoration: isDone ? "line-through" : "none"
-                              }}
-                            >
-                              {topic.title}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                              <div
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 800,
+                                  color: isDone ? "#64748b" : "#1a1040",
+                                  textDecoration: isDone ? "line-through" : "none"
+                                }}
+                              >
+                                {topic.title}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: 99,
+                                  fontSize: 10.5,
+                                  fontWeight: 800,
+                                  background: topic.isRevision ? '#fef3c7' : '#ede9fe',
+                                  color: topic.isRevision ? '#b45309' : '#6d28d9',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.04em'
+                                }}>
+                                  {topic.isRevision ? 'Known Stack Revision' : 'Core Gap'}
+                                </span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>
+                                  ⏱️ {topic.estimatedHours || 8} hrs
+                                </span>
+                              </div>
                             </div>
 
                             <div style={{ fontSize: 13, color: "#64748b", margin: "4px 0 10px", lineHeight: 1.5 }}>
                               <strong>Architecture Concepts:</strong> {topic.keyConcepts}
                             </div>
 
-                            {/* Interview Drill Prompt */}
+                            {/* Hands-on practice task / coding drill */}
+                            {topic.practiceTask && (
+                              <div style={{
+                                background: "#f0fdf4",
+                                borderRadius: 10,
+                                padding: "9px 13px",
+                                border: "1px solid #bbf7d0",
+                                fontSize: 12.5,
+                                color: "#166534",
+                                marginBottom: 10,
+                                lineHeight: 1.45
+                              }}>
+                                <strong>🛠️ Hands-on Drill / Task:</strong> {topic.practiceTask}
+                              </div>
+                            )}
+
+                            {/* Expected Real Interview Questions */}
                             <div
                               style={{
                                 background: "#f8fafc",
                                 borderRadius: 12,
-                                padding: "10px 14px",
+                                padding: "12px 14px",
                                 border: "1px solid #e2e8f0",
-                                fontSize: 12,
-                                color: "#334155"
+                                fontSize: 12.5,
+                                color: "#334155",
+                                marginBottom: 10
                               }}
                             >
-                              <div style={{ fontWeight: 700, color: "#475569", marginBottom: 3 }}>
-                                🎯 Expected Interview Question:
+                              <div style={{ fontWeight: 700, color: "#475569", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <i className="ti ti-target" style={{ color: '#7c3aed' }} /> Expected High-Frequency Interview Questions:
                               </div>
-                              <div style={{ fontStyle: "italic" }}>
-                                "How would you design a fault-tolerant {topic.title.toLowerCase()} that guarantees data consistency under network partitions?"
-                              </div>
+                              {Array.isArray(topic.interviewQuestions) && topic.interviewQuestions.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                  {topic.interviewQuestions.map((iq, qIdx) => {
+                                    const qKey = `${topic.id}-q-${qIdx}`;
+                                    const showHint = !!expandedHints[qKey];
+                                    return (
+                                      <div key={qIdx} style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontWeight: 600, color: '#1e293b', fontStyle: 'italic' }}>
+                                          "{iq.question}"
+                                        </div>
+                                        {iq.answerHint && (
+                                          <div style={{ marginTop: 6 }}>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleHint(qKey);
+                                              }}
+                                              style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#7c3aed',
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 4
+                                              }}
+                                            >
+                                              <i className={`ti ${showHint ? 'ti-chevron-up' : 'ti-chevron-down'}`} />
+                                              {showHint ? 'Hide Talking Points' : '💡 Show Answer Talking Points & Trade-offs'}
+                                            </button>
+                                            {showHint && (
+                                              <div style={{
+                                                marginTop: 6,
+                                                fontSize: 11.5,
+                                                color: '#475569',
+                                                lineHeight: 1.45,
+                                                background: '#faf5ff',
+                                                padding: '6px 10px',
+                                                borderRadius: 6,
+                                                borderLeft: '3px solid #7c3aed'
+                                              }}>
+                                                {iq.answerHint}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div style={{ fontStyle: "italic", color: '#475569' }}>
+                                  "Walk me through how you would architect {topic.title} to guarantee high availability and sub-50ms latency under 10x traffic spikes."
+                                </div>
+                              )}
                             </div>
+
+                            {/* Reference reading */}
+                            {topic.readingResource && (
+                              <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 8 }}>
+                                📖 <strong>Recommended Reference:</strong> {topic.readingResource}
+                              </div>
+                            )}
 
                             {/* Direct Mock Interview Action Button */}
                             <button
-                              onClick={() => navigate("/interviews")}
+                              onClick={() => navigate("/interviews", { state: { initialTopic: topic.title } })}
                               style={{
-                                marginTop: 10,
+                                marginTop: 4,
                                 padding: "6px 12px",
                                 borderRadius: 10,
                                 background: "none",
@@ -1058,7 +1335,7 @@ export default function RoadmapPage() {
                               }}
                             >
                               <i className="ti ti-message-2-code" />
-                              Practice This Question in Mock Chat
+                              Practice This Topic in AI Mock Interview
                             </button>
                           </div>
                         </div>

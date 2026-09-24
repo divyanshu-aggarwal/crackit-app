@@ -12,4 +12,12 @@ public class UserProfileRequest {
     private Integer yearsExperience;
     private String currentCompany;
     private String currentRole;
+    private String targetRole;
+    private String currentCtc;
+    private String expectedCtc;
+    private String noticePeriod;
+    private Boolean servingNotice;
+    private String lastWorkingDay;
+    private String preferredWorkMode;
+    private String preferredLocations;
 }

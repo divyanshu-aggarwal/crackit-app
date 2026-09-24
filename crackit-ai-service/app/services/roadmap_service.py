@@ -19,7 +19,8 @@ class RoadmapService:
             model=self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.4,
+                response_mime_type="application/json",
+                temperature=0.35,
                 max_output_tokens=16384,
             )
         )

@@ -40,6 +40,14 @@ public class UserController {
         if (request.getYearsExperience() != null) user.setYearsExperience(request.getYearsExperience());
         if (request.getCurrentCompany() != null) user.setCurrentCompany(request.getCurrentCompany());
         if (request.getCurrentRole() != null) user.setCurrentRole(request.getCurrentRole());
+        if (request.getTargetRole() != null) user.setTargetRole(request.getTargetRole());
+        if (request.getCurrentCtc() != null) user.setCurrentCtc(request.getCurrentCtc());
+        if (request.getExpectedCtc() != null) user.setExpectedCtc(request.getExpectedCtc());
+        if (request.getNoticePeriod() != null) user.setNoticePeriod(request.getNoticePeriod());
+        if (request.getServingNotice() != null) user.setServingNotice(request.getServingNotice());
+        if (request.getLastWorkingDay() != null) user.setLastWorkingDay(request.getLastWorkingDay());
+        if (request.getPreferredWorkMode() != null) user.setPreferredWorkMode(request.getPreferredWorkMode());
+        if (request.getPreferredLocations() != null) user.setPreferredLocations(request.getPreferredLocations());
         userRepository.save(user);
         return toResponse(user);
     }
@@ -59,6 +67,14 @@ public class UserController {
                 .yearsExperience(user.getYearsExperience())
                 .currentCompany(user.getCurrentCompany())
                 .currentRole(user.getCurrentRole())
+                .targetRole(user.getTargetRole())
+                .currentCtc(user.getCurrentCtc())
+                .expectedCtc(user.getExpectedCtc())
+                .noticePeriod(user.getNoticePeriod())
+                .servingNotice(user.getServingNotice())
+                .lastWorkingDay(user.getLastWorkingDay())
+                .preferredWorkMode(user.getPreferredWorkMode())
+                .preferredLocations(user.getPreferredLocations())
                 .subscriptionTier(user.getSubscriptionTier())
                 .subscriptionStatus(user.getSubscriptionStatus())
                 .subscriptionExpiresAt(user.getSubscriptionExpiresAt())

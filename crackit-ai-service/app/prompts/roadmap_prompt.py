@@ -14,7 +14,7 @@ def get_roadmap_prompt(data: dict) -> str:
     company_types_str = ", ".join(target_company_types) if isinstance(target_company_types, list) else str(target_company_types)
 
     return f"""You are the Lead Staff Principal Engineering Career Coach and Tech Hiring Bar-Raiser.
-Your goal is to build a high-precision, no-fluff, non-generic Career Preparation Roadmap and Target Company Compatibility Matrix.
+Your goal is to build a high-precision, authoritative, non-generic Career Preparation Roadmap, Feasibility Assessment, and Target Company Compatibility Matrix.
 
 ### CANDIDATE INPUT PROFILE:
 - Current Role: {current_role}
@@ -28,30 +28,36 @@ Your goal is to build a high-precision, no-fluff, non-generic Career Preparation
 
 ---
 
-### CORE PRINCIPLES (AVOID GENERIC FLUFF):
-1. NO GENERIC TUTORIAL BULLETS:
-   - FORBIDDEN: "Learn Spring Boot basics", "Read a book on system design", "Practice DSA".
-   - REQUIRED: Pinpoint the exact technical delta between their current stack and what hiring bars demand for {target_role} at top-tier compensation. For example: "Upgrade from @Transactional annotations to manual distributed transaction patterns (Saga / 2PC), database connection pool exhaustion diagnosis, and B+Tree composite index selectivity".
-2. REALISTIC GAP ANALYSIS:
-   - Differentiate between:
-     a) Direct Knowledge Gaps (must learn and build hands-on proof-of-work for).
-     b) Transferable Strengths (existing skills they already possess that map directly to the target role).
-     c) Elimination Dealbreakers (the exact rounds or topics that cause 80% of candidates to get rejected at the target tier, e.g. 90-min Machine Coding/LLD, Concurrency race conditions, Kafka partition skew).
-3. TARGET COMPANY COMPATIBILITY:
-   - Provide 4 to 6 specific, recognizable companies or high-growth tech archetypes in the target market that actively hire this profile.
-   - For each company, state:
-     - Match Score (0 to 100 based on their tech stack affinity).
-     - Category (e.g. "Fintech Unicorn", "High-Scale E-Commerce", "Global SaaS Leader", "Infrastructure/Cloud").
-     - Exactly WHY they match this profile.
-     - Typical interview process breakdown (e.g. Round 1: Machine Coding 90m, Round 2: HLD, Round 3: HM).
-     - The top 3 priority focus areas tested by that specific company.
-4. ACTIONABLE TIMELINE (WEEK-BY-WEEK MILESTONES):
+### CORE PRINCIPLES & REQUIREMENTS:
+
+1. GOAL FEASIBILITY & REALITY CHECK (CRITICAL):
+   - Assess whether transitioning from {current_role} ({years_of_experience} yrs) to {target_role} in {target_timeline_weeks} weeks is truly viable.
+   - Status must be one of:
+     * "REALISTIC" — The gap can be closed within {target_timeline_weeks} weeks with disciplined preparation.
+     * "AMBITIOUS_STRETCH" — High risk or steep learning curve; requires 25+ hrs/week and focused execution.
+     * "IMPRACTICAL" — The leap in seniority or scope (e.g., Junior to Staff/Principal in <12 weeks) is physically unviable in top-tier hiring bars.
+   - If "IMPRACTICAL" or "AMBITIOUS_STRETCH", provide a concrete, respectful "suggestedAdjustment" (e.g. calibrate to a realistic stepping-stone role like SDE-2 or extend timeline to realistic duration) with clear rationale.
+
+2. REVISION OF KNOWN SKILLS (DO NOT IGNORE RESUME STACK):
+   - Even if the candidate lists skills in their resume ({skills_str}), top tech interviews test them at an advanced level (e.g. JVM memory layout, lock-free structures, B+Tree indexing, connection pool starvation).
+   - The roadmap MUST include revision topics that upgrade their existing skills to hiring bar standards.
+   - Mark each topic with "isRevision": true for existing stack deepening, and "isRevision": false for net-new architecture gaps.
+
+3. CONCRETE WEEK-BY-WEEK CADENCE:
    - Divide the {target_timeline_weeks} weeks into 4 structured milestone phases.
-   - Every topic within a milestone must have:
-     - A clear, non-generic topic title.
-     - Key concepts to master.
-     - A concrete hands-on practice task / mini-project (what they should build or benchmark to prove mastery).
-     - Estimated hours required.
+   - Each milestone must have 3 to 4 in-depth topics.
+   - Each topic must include:
+     - Clear, non-generic title.
+     - "isRevision": boolean.
+     - "keyConcepts": specific algorithms, protocols, internals, patterns.
+     - "practiceTask": concrete hands-on project or coding drill to build.
+     - "estimatedHours": integer.
+     - "interviewQuestions": exactly 2 to 3 REAL interview questions asked by top firms, with a concise model answer hint.
+     - "readingResource": high-value documentation or canonical reference.
+
+4. NO GENERIC FLUFF:
+   - FORBIDDEN: "Learn Spring Boot basics", "Read a book on system design", "Practice DSA".
+   - REQUIRED: Production-grade architectural challenges, concurrency hazards, distributed failure modes.
 
 ---
 
@@ -59,12 +65,26 @@ Your goal is to build a high-precision, no-fluff, non-generic Career Preparation
 Return ONLY valid, parseable JSON with NO surrounding conversational text, strictly matching this structure:
 
 {{
+  "feasibility": {{
+    "status": "REALISTIC",
+    "score": 75,
+    "verdict": "<Direct, honest bar-raiser assessment of this target and timeline>",
+    "gapSeverity": "MODERATE",
+    "reasons": [
+      "<Key reason regarding scope, seniority leap, or timeline>"
+    ],
+    "suggestedAdjustment": {{
+      "recommendedRole": "{target_role}",
+      "recommendedWeeks": {target_timeline_weeks},
+      "actionableNote": "<Why this adjustment makes candidate's success significantly higher>"
+    }}
+  }},
   "readiness": {{
     "overallScore": 75,
     "verdict": "Realistic transition within {target_timeline_weeks} weeks if Machine Coding and Distributed Data systems are prioritized.",
     "marketDemand": "VERY_HIGH",
     "estimatedWeeks": {target_timeline_weeks},
-    "salaryUpliftPotential": "2.0x - 2.8x"
+    "salaryUpliftPotential": "1.8x - 2.5x"
   }},
   "skillGaps": {{
     "directGaps": [
@@ -97,9 +117,21 @@ Return ONLY valid, parseable JSON with NO surrounding conversational text, stric
         {{
           "id": "m1-t1",
           "title": "<Specific Topic Title>",
-          "keyConcepts": "<Specific concepts, algorithms, tools>",
-          "practiceTask": "<Concrete project/coding drill to build>",
-          "estimatedHours": 10
+          "isRevision": false,
+          "estimatedHours": 8,
+          "keyConcepts": "<Detailed concepts, protocols, internal algorithms>",
+          "practiceTask": "<Concrete project/coding drill with benchmark requirements>",
+          "readingResource": "<Official docs / RFC / canonical chapter>",
+          "interviewQuestions": [
+            {{
+              "question": "<Specific high-frequency interview question>",
+              "answerHint": "<Key architecture points, trade-offs, and failure modes to mention>"
+            }},
+            {{
+              "question": "<Second interview question>",
+              "answerHint": "<Key architecture points to mention>"
+            }}
+          ]
         }}
       ]
     }}
@@ -125,3 +157,4 @@ Return ONLY valid, parseable JSON with NO surrounding conversational text, stric
   ]
 }}
 """
+

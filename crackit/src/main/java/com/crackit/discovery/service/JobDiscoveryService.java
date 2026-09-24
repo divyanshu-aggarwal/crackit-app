@@ -66,11 +66,18 @@ public class JobDiscoveryService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String location = user.getLocation() != null ? user.getLocation() : "India";
+        String location = "India";
+        if ("Remote".equalsIgnoreCase(user.getPreferredWorkMode())) {
+            location = "Remote";
+        } else if (user.getPreferredLocations() != null && !user.getPreferredLocations().isBlank()) {
+            location = user.getPreferredLocations().split("[,;/]")[0].trim();
+        } else if (user.getLocation() != null && !user.getLocation().isBlank()) {
+            location = user.getLocation().trim();
+        }
 
         // build keywords from user's actual data
         List<String> keywords = buildKeywords(user);
-        log.info("Fetching recommended jobs for keywords: {}", keywords);
+        log.info("Fetching recommended jobs for keywords: {}, location: {}", keywords, location);
 
         // always fetch fresh for each keyword
         for (String keyword : keywords) {
@@ -78,7 +85,6 @@ public class JobDiscoveryService {
         }
 
         // return jobs fetched in last 24 hours matching user's role
-        String primaryRole = user.getCurrentRole() != null ? user.getCurrentRole() : "Software Engineer";
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
         List<DiscoveredJob> results = new ArrayList<>();
@@ -118,20 +124,26 @@ public class JobDiscoveryService {
     private List<String> buildKeywords(User user) {
         List<String> keywords = new ArrayList<>();
 
-        // 1. Current role — highest priority
-        if (user.getCurrentRole() != null && !user.getCurrentRole().isBlank()) {
-            keywords.add(user.getCurrentRole());
+        // 1. Target role — highest priority for candidate's next career move
+        if (user.getTargetRole() != null && !user.getTargetRole().isBlank()) {
+            keywords.add(user.getTargetRole().trim());
         }
 
-        // 2. Current experience role
+        // 2. Current role — if not already added
+        if (user.getCurrentRole() != null && !user.getCurrentRole().isBlank()
+                && !keywords.contains(user.getCurrentRole().trim())) {
+            keywords.add(user.getCurrentRole().trim());
+        }
+
+        // 3. Current experience role
         List<Experience> experiences = experienceRepository.findByUserId(user.getId());
         experiences.stream()
                 .filter(e -> Boolean.TRUE.equals(e.getCurrentCompany()))
                 .findFirst()
                 .ifPresent(e -> {
                     if (e.getRole() != null && !e.getRole().isBlank()
-                            && !keywords.contains(e.getRole())) {
-                        keywords.add(e.getRole());
+                            && !keywords.contains(e.getRole().trim())) {
+                        keywords.add(e.getRole().trim());
                     }
                 });
 

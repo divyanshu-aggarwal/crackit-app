@@ -60,6 +60,31 @@ public class User {
     @Column(name = "`current_role`", length = 150)
     private String currentRole;
 
+    @Column(name = "target_role", length = 150)
+    private String targetRole;
+
+    @Column(name = "current_ctc", length = 50)
+    private String currentCtc;
+
+    @Column(name = "expected_ctc", length = 50)
+    private String expectedCtc;
+
+    @Column(name = "notice_period", length = 50)
+    private String noticePeriod;
+
+    @Column(name = "serving_notice")
+    @Builder.Default
+    private Boolean servingNotice = false;
+
+    @Column(name = "last_working_day", length = 30)
+    private String lastWorkingDay;
+
+    @Column(name = "preferred_work_mode", length = 50)
+    private String preferredWorkMode;
+
+    @Column(name = "preferred_locations", length = 200)
+    private String preferredLocations;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

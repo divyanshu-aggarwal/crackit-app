@@ -44,17 +44,37 @@ public class RoadmapService {
             skills = userSkills.stream().map(Skill::getSkillName).toList();
         }
 
+        String effectiveCurrentRole = (request.getCurrentRole() != null && !request.getCurrentRole().isBlank())
+                ? request.getCurrentRole()
+                : (user.getCurrentRole() != null && !user.getCurrentRole().isBlank() ? user.getCurrentRole() : "Software Engineer");
+
+        Double effectiveYoe = request.getYearsOfExperience() != null
+                ? request.getYearsOfExperience()
+                : (user.getYearsExperience() != null ? user.getYearsExperience().doubleValue() : 2.0);
+
+        String effectiveCurrentComp = (request.getCurrentCompensation() != null && !request.getCurrentCompensation().isBlank())
+                ? request.getCurrentCompensation()
+                : (user.getCurrentCtc() != null && !user.getCurrentCtc().isBlank() ? user.getCurrentCtc() : "Market standard");
+
+        String effectiveTargetRole = (request.getTargetRole() != null && !request.getTargetRole().isBlank())
+                ? request.getTargetRole()
+                : (user.getTargetRole() != null && !user.getTargetRole().isBlank() ? user.getTargetRole() : "Senior Software Engineer");
+
+        String effectiveTargetComp = (request.getTargetCompensation() != null && !request.getTargetCompensation().isBlank())
+                ? request.getTargetCompensation()
+                : (user.getExpectedCtc() != null && !user.getExpectedCtc().isBlank() ? user.getExpectedCtc() : "Competitive Top-of-Market");
+
         Map<String, Object> payload = new HashMap<>();
-        payload.put("current_role", request.getCurrentRole() != null ? request.getCurrentRole() : "Software Engineer");
-        payload.put("years_of_experience", request.getYearsOfExperience() != null ? request.getYearsOfExperience() : 2.0);
+        payload.put("current_role", effectiveCurrentRole);
+        payload.put("years_of_experience", effectiveYoe);
         payload.put("current_skills", skills);
-        payload.put("current_compensation", request.getCurrentCompensation() != null ? request.getCurrentCompensation() : "Market standard");
-        payload.put("target_role", request.getTargetRole());
-        payload.put("target_compensation", request.getTargetCompensation() != null ? request.getTargetCompensation() : "Competitive Top-of-Market");
+        payload.put("current_compensation", effectiveCurrentComp);
+        payload.put("target_role", effectiveTargetRole);
+        payload.put("target_compensation", effectiveTargetComp);
         payload.put("target_timeline_weeks", request.getTargetTimelineWeeks() != null ? request.getTargetTimelineWeeks() : 8);
         payload.put("target_company_types", request.getTargetCompanyTypes() != null ? request.getTargetCompanyTypes() : List.of("Product Startups", "Unicorns", "Top Tech MNCs"));
 
-        log.info("Generating Career Prep Roadmap for user '{}', Target: '{}'", email, request.getTargetRole());
+        log.info("Generating Career Prep Roadmap for user '{}', Target: '{}'", email, effectiveTargetRole);
         Map<String, Object> roadmapData;
         try {
             roadmapData = aiServiceClient.generateRoadmap(payload);

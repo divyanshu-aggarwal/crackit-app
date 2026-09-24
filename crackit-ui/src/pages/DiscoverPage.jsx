@@ -401,9 +401,28 @@ export default function DiscoverPage() {
   const [location, setLocation] = useState("");
   const [mode, setMode] = useState("recommended"); // recommended | search
   const [error, setError] = useState("");
+  const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => { fetchRecommended(); }, []);
+  useEffect(() => {
+    fetchRecommended();
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`${API}/users/profile`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        if (data.preferredLocations && !location) {
+          setLocation(data.preferredLocations.split(/[,;/]/)[0].trim());
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchRecommended = async () => {
     setLoading(true);
@@ -604,13 +623,38 @@ export default function DiscoverPage() {
 
         {/* Mode label */}
         {!loading && jobs.length > 0 && (
-          <div className="mode-bar">
+          <div className="mode-bar" style={{ flexWrap: 'wrap', gap: 8 }}>
             <span className="mode-label">
-              {mode === "recommended"
-                ? <><strong>{jobs.length}</strong> recommended jobs based on your profile</>
-                : <><strong>{jobs.length}</strong> results for "<strong>{keyword}</strong>"</>
-              }
+              {mode === "recommended" ? (
+                <>
+                  <strong>{jobs.length}</strong> jobs curated for{" "}
+                  <strong style={{ color: "#7c3aed" }}>
+                    {profile?.targetRole || profile?.currentRole || "your profile"}
+                  </strong>
+                  {profile?.preferredLocations && (
+                    <span style={{ color: "#64748b" }}> in {profile.preferredLocations}</span>
+                  )}
+                </>
+              ) : (
+                <><strong>{jobs.length}</strong> results for "<strong>{keyword}</strong>"</>
+              )}
             </span>
+            {mode === "recommended" && (
+              <span
+                onClick={() => navigate("/profile")}
+                style={{
+                  fontSize: 12,
+                  color: "#7c3aed",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4
+                }}
+              >
+                <i className="ti ti-adjustments" /> Tune Preferences in Profile
+              </span>
+            )}
           </div>
         )}
 

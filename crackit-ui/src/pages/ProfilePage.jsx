@@ -17,8 +17,10 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingCareer, setEditingCareer] = useState(false);
+  const [editingPreferences, setEditingPreferences] = useState(false);
   const [personalForm, setPersonalForm] = useState({});
   const [careerForm, setCareerForm] = useState({});
+  const [preferencesForm, setPreferencesForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -41,7 +43,17 @@ export default function ProfilePage() {
         setCareerForm({
           currentRole: data.currentRole || "",
           currentCompany: data.currentCompany || "",
-          yearsExperience: data.yearsExperience || "",
+          yearsExperience: data.yearsExperience != null ? data.yearsExperience : "",
+          noticePeriod: data.noticePeriod || "",
+          servingNotice: Boolean(data.servingNotice),
+          lastWorkingDay: data.lastWorkingDay || "",
+        });
+        setPreferencesForm({
+          targetRole: data.targetRole || "",
+          currentCtc: data.currentCtc || "",
+          expectedCtc: data.expectedCtc || "",
+          preferredWorkMode: data.preferredWorkMode || "",
+          preferredLocations: data.preferredLocations || "",
         });
       }
     } catch (e) { console.error(e); }
@@ -76,6 +88,11 @@ export default function ProfilePage() {
     setEditingCareer(false);
   };
 
+  const savePreferences = async () => {
+    await saveSection(preferencesForm);
+    setEditingPreferences(false);
+  };
+
   const resetToFree = async () => {
     setSaving(true);
     try {
@@ -96,6 +113,26 @@ export default function ProfilePage() {
 
   const initials = profile?.fullName
     ?.trim()?.split(" ")?.map(w => w[0])?.join("")?.slice(0, 2)?.toUpperCase() || "?";
+
+  const calculateCompleteness = (p) => {
+    if (!p) return 0;
+    const checks = [
+      Boolean(p.fullName),
+      Boolean(p.email),
+      Boolean(p.phone),
+      Boolean(p.location),
+      Boolean(p.currentRole),
+      Boolean(p.currentCompany),
+      p.yearsExperience != null && p.yearsExperience !== "",
+      Boolean(p.noticePeriod),
+      Boolean(p.targetRole),
+      Boolean(p.expectedCtc || p.currentCtc),
+    ];
+    const filled = checks.filter(Boolean).length;
+    return Math.round((filled / checks.length) * 100);
+  };
+
+  const completeness = calculateCompleteness(profile);
 
   return (
     <>
@@ -155,14 +192,14 @@ export default function ProfilePage() {
           font-size: 0.72rem; color: #a094c4; text-transform: uppercase;
           letter-spacing: 0.05em; font-weight: 600;
         }
-        .form-group input {
+        .form-group input, .form-group select {
           padding: 0.5rem 0.75rem; border: 1px solid #e0d9ff; border-radius: 8px;
           font-size: 0.9rem; font-family: inherit; outline: none;
           background: #fff; color: #1a1040; transition: border 0.15s;
           box-sizing: border-box; width: 100%;
         }
-        .form-group input:focus { border-color: #7c3aed; }
-        .form-group input:disabled { background: #f9f8ff; color: #bbb; }
+        .form-group input:focus, .form-group select:focus { border-color: #7c3aed; }
+        .form-group input:disabled, .form-group select:disabled { background: #f9f8ff; color: #bbb; }
 
         .form-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
         .btn-primary {
@@ -281,7 +318,7 @@ export default function ProfilePage() {
         ) : (
           <>
             {/* Header card */}
-            <div className="profile-card profile-header-card">
+            <div className="profile-card profile-header-card" style={{ flexWrap: 'wrap' }}>
               <div className="profile-big-avatar">{initials}</div>
               <div className="profile-header-info">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 0.2rem' }}>
@@ -302,6 +339,43 @@ export default function ProfilePage() {
                   <i className="ti ti-check" /> {savedMsg}
                 </div>
               )}
+              {/* Profile Strength Indicator */}
+              <div style={{
+                width: '100%',
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: '1px solid #f0eeff',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c6faa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Profile Strength
+                  </span>
+                  <span style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: completeness >= 80 ? '#059669' : completeness >= 50 ? '#d97706' : '#7c3aed'
+                  }}>
+                    {completeness}% Completed
+                  </span>
+                </div>
+                <div style={{ height: 6, background: '#f0eeff', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${completeness}%`,
+                    height: '100%',
+                    background: completeness >= 80 ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #7c3aed, #a855f7)',
+                    borderRadius: 99,
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+                {completeness < 100 && (
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                    💡 Fill in your target role, notice period & CTC to unlock 3x more accurate job & interview recommendations.
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Subscription & Membership Card */}
@@ -529,10 +603,10 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Career info */}
+            {/* Career & Employment status */}
             <div className="profile-card">
               <div className="profile-card-header">
-                <h2>Career info</h2>
+                <h2>Career & Employment Status</h2>
                 {!editingCareer && (
                   <button className="btn-icon-edit" onClick={() => setEditingCareer(true)}>
                     <i className="ti ti-edit" style={{ fontSize: "1rem" }} />
@@ -545,11 +619,19 @@ export default function ProfilePage() {
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Current role</label>
-                      <input value={careerForm.currentRole} onChange={e => setCareerForm({ ...careerForm, currentRole: e.target.value })} placeholder="e.g. Software Engineer" />
+                      <input
+                        value={careerForm.currentRole}
+                        onChange={e => setCareerForm({ ...careerForm, currentRole: e.target.value })}
+                        placeholder="e.g. Software Engineer"
+                      />
                     </div>
                     <div className="form-group">
                       <label>Current company</label>
-                      <input value={careerForm.currentCompany} onChange={e => setCareerForm({ ...careerForm, currentCompany: e.target.value })} placeholder="e.g. Google" />
+                      <input
+                        value={careerForm.currentCompany}
+                        onChange={e => setCareerForm({ ...careerForm, currentCompany: e.target.value })}
+                        placeholder="e.g. Razorpay"
+                      />
                     </div>
                     <div className="form-group">
                       <label>Years of experience</label>
@@ -557,9 +639,45 @@ export default function ProfilePage() {
                         type="number" min="0" max="50"
                         value={careerForm.yearsExperience}
                         onChange={e => setCareerForm({ ...careerForm, yearsExperience: parseInt(e.target.value) || 0 })}
-                        style={{ maxWidth: 120 }}
                       />
                     </div>
+                    <div className="form-group">
+                      <label>Notice period</label>
+                      <select
+                        value={careerForm.noticePeriod}
+                        onChange={e => setCareerForm({ ...careerForm, noticePeriod: e.target.value })}
+                      >
+                        <option value="">Select notice period</option>
+                        <option value="Immediate (0 days)">Immediate (0 days)</option>
+                        <option value="15 Days or less">15 Days or less</option>
+                        <option value="30 Days">30 Days</option>
+                        <option value="45 Days">45 Days</option>
+                        <option value="60 Days">60 Days</option>
+                        <option value="90 Days">90 Days</option>
+                        <option value="Serving Notice">Serving Notice</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', textTransform: 'none', fontSize: '0.88rem', color: '#1a1040' }}>
+                        <input
+                          type="checkbox"
+                          checked={careerForm.servingNotice}
+                          onChange={e => setCareerForm({ ...careerForm, servingNotice: e.target.checked })}
+                          style={{ width: 'auto', accentColor: '#7c3aed' }}
+                        />
+                        Actively serving notice period
+                      </label>
+                    </div>
+                    {careerForm.servingNotice && (
+                      <div className="form-group">
+                        <label>Last working day (LWD)</label>
+                        <input
+                          type="date"
+                          value={careerForm.lastWorkingDay}
+                          onChange={e => setCareerForm({ ...careerForm, lastWorkingDay: e.target.value })}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="form-actions">
                     <button className="btn-primary" onClick={saveCareer} disabled={saving}>
@@ -573,7 +691,102 @@ export default function ProfilePage() {
                   {[
                     { label: "Current role", value: profile?.currentRole },
                     { label: "Current company", value: profile?.currentCompany },
-                    { label: "Years of experience", value: profile?.yearsExperience != null ? `${profile.yearsExperience} years` : null },
+                    { label: "Years of experience", value: profile?.yearsExperience != null && profile?.yearsExperience !== "" ? `${profile.yearsExperience} years` : null },
+                    { label: "Notice period", value: profile?.noticePeriod },
+                    {
+                      label: "Notice status",
+                      value: profile?.servingNotice
+                        ? `Serving Notice (LWD: ${profile?.lastWorkingDay || "Not specified"})`
+                        : "Not serving notice"
+                    }
+                  ].map(({ label, value }) => (
+                    <div key={label} className="profile-field">
+                      <span className="profile-field-label">{label}</span>
+                      {value
+                        ? <span className="profile-field-value">{value}</span>
+                        : <span className="profile-field-empty">Not set</span>
+                      }
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Compensation & Job Search Preferences */}
+            <div className="profile-card">
+              <div className="profile-card-header">
+                <h2>Compensation & Job Search Preferences</h2>
+                {!editingPreferences && (
+                  <button className="btn-icon-edit" onClick={() => setEditingPreferences(true)}>
+                    <i className="ti ti-edit" style={{ fontSize: "1rem" }} />
+                  </button>
+                )}
+              </div>
+
+              {editingPreferences ? (
+                <>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Target Role / Dream Title</label>
+                      <input
+                        value={preferencesForm.targetRole}
+                        onChange={e => setPreferencesForm({ ...preferencesForm, targetRole: e.target.value })}
+                        placeholder="e.g. Senior Backend Engineer"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Preferred Work Mode</label>
+                      <select
+                        value={preferencesForm.preferredWorkMode}
+                        onChange={e => setPreferencesForm({ ...preferencesForm, preferredWorkMode: e.target.value })}
+                      >
+                        <option value="">Select work mode</option>
+                        <option value="Remote">Remote Only</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="On-site">On-site</option>
+                        <option value="Open to Any">Open to Any</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Current CTC / Salary</label>
+                      <input
+                        value={preferencesForm.currentCtc}
+                        onChange={e => setPreferencesForm({ ...preferencesForm, currentCtc: e.target.value })}
+                        placeholder="e.g. 14 LPA or $80,000"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Expected CTC / Salary</label>
+                      <input
+                        value={preferencesForm.expectedCtc}
+                        onChange={e => setPreferencesForm({ ...preferencesForm, expectedCtc: e.target.value })}
+                        placeholder="e.g. 24 LPA or $125,000"
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label>Preferred Locations</label>
+                      <input
+                        value={preferencesForm.preferredLocations}
+                        onChange={e => setPreferencesForm({ ...preferencesForm, preferredLocations: e.target.value })}
+                        placeholder="e.g. Bangalore, Hyderabad, Remote India"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button className="btn-primary" onClick={savePreferences} disabled={saving}>
+                      {saving ? <><i className="ti ti-loader" /> Saving...</> : "Save changes"}
+                    </button>
+                    <button className="btn-ghost" onClick={() => setEditingPreferences(false)}>Cancel</button>
+                  </div>
+                </>
+              ) : (
+                <div className="profile-grid">
+                  {[
+                    { label: "Target role", value: profile?.targetRole },
+                    { label: "Preferred work mode", value: profile?.preferredWorkMode },
+                    { label: "Current CTC", value: profile?.currentCtc },
+                    { label: "Expected CTC", value: profile?.expectedCtc },
+                    { label: "Preferred locations", value: profile?.preferredLocations }
                   ].map(({ label, value }) => (
                     <div key={label} className="profile-field">
                       <span className="profile-field-label">{label}</span>
