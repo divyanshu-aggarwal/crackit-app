@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
@@ -13,6 +13,11 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  useEffect(() => {
+    // Pre-warm backend on load
+    api.get('/api/health').catch(() => {})
+  }, [])
 
   const passwordsMatch = form.password && form.confirmPassword && form.password === form.confirmPassword
 
@@ -223,7 +228,7 @@ export default function Signup() {
             }}
           >
             {loading
-              ? <><i className="ti ti-loader" style={{ fontSize: 15 }} /> Creating account...</>
+              ? <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: 16 }} /> Creating account...</>
               : 'Create account'
             }
           </button>

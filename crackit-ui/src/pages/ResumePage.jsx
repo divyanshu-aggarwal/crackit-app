@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import AiLoadingOverlay from '../components/AiLoadingOverlay'
 import PageHeader from '../components/ui/PageHeader'
-import { API_BASE_URL } from '../api/axios'
+import api, { API_BASE_URL } from '../api/axios'
 
 const API = `${API_BASE_URL}/api`;
 
@@ -815,22 +815,43 @@ export default function ResumePage() {
   }
   setLoading(false);
 };
-    const handleUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await fetch(`${API}/resume/upload`, { method: "POST", headers: authHeaders(true), body: fd });
-      if (res.ok) {
+      const res = await api.post("/api/resume/upload", fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      if (res.data) {
+        const data = res.data;
+        const mr = Array.isArray(data.masterResume) ? data.masterResume[0] : data.masterResume;
+        setResume(mr || null);
+        setSkills(data.skills || []);
+        setExperiences((data.experiences || []).map(exp => ({ ...exp, bullets: exp.bullets || [] })));
+        setProjects(data.projects || []);
         setUploadSuccess(true);
-        setTimeout(() => setUploadSuccess(false), 3000);
-        await fetchAll();
+        setTimeout(() => setUploadSuccess(false), 4000);
+        window.dispatchEvent(
+          new CustomEvent('crackit:toast', {
+            detail: { type: 'success', message: '🎉 Resume parsed and updated successfully!' }
+          })
+        );
       }
-    } catch (e) { console.error(e); }
-    setUploading(false);
-    fileRef.current.value = "";
+    } catch (err) {
+      console.error("Resume upload error:", err);
+      const errMsg = err.response?.data?.message || err.message || "Failed to parse resume. Please ensure the PDF has readable text.";
+      window.dispatchEvent(
+        new CustomEvent('crackit:toast', {
+          detail: { type: 'error', message: errMsg }
+        })
+      );
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const handleDownload = async () => {
@@ -943,6 +964,13 @@ const missingItems = strengthItems.filter(i => !i.done)
  return (
   <>
     <AiLoadingOverlay type="parse" visible={uploading} />
+    <input
+      type="file"
+      accept=".pdf"
+      ref={fileRef}
+      style={{ display: "none" }}
+      onChange={handleUpload}
+    />
       <style>{`
 .resume-page {
   display: grid;
@@ -1427,13 +1455,18 @@ const missingItems = strengthItems.filter(i => !i.done)
   <SectionNav active={activeSection} setActive={setActiveSection} />
 
   <div className="mobile-resume-actions">
-    <button className="btn-upload" onClick={() => fileRef.current.click()} disabled={uploading}>
-      <i className="ti ti-upload" />
-      {uploading ? "Parsing..." : "Upload PDF"}
+    {uploadSuccess && (
+      <div className="upload-success" style={{ width: '100%', textAlign: 'center', marginBottom: 6 }}>
+        <i className="ti ti-check" /> Resume parsed & updated!
+      </div>
+    )}
+    <button className="btn-upload" onClick={() => fileRef.current?.click()} disabled={uploading}>
+      <i className={`ti ${uploading ? 'ti-loader-2 ti-spin' : 'ti-upload'}`} />
+      {uploading ? "Parsing with AI..." : "Upload PDF"}
     </button>
 
     <button className="btn-download" onClick={handleDownload} disabled={downloading}>
-      <i className="ti ti-download" />
+      <i className={`ti ${downloading ? 'ti-loader-2 ti-spin' : 'ti-download'}`} />
       {downloading ? "Generating..." : "Download PDF"}
     </button>
   </div>
@@ -1487,14 +1520,13 @@ const missingItems = strengthItems.filter(i => !i.done)
           <SectionNav active={activeSection} setActive={setActiveSection} />
 
           <div className="sidebar-actions">
-            {uploadSuccess && <div className="upload-success"><i className="ti ti-check" /> Resume parsed!</div>}
-            <input type="file" accept=".pdf" ref={fileRef} style={{ display: "none" }} onChange={handleUpload} />
-            <button className="btn-upload" onClick={() => fileRef.current.click()} disabled={uploading}>
-              <i className="ti ti-upload" />
-              {uploading ? "Parsing..." : "Upload PDF"}
+            {uploadSuccess && <div className="upload-success"><i className="ti ti-check" /> Resume parsed & updated!</div>}
+            <button className="btn-upload" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              <i className={`ti ${uploading ? 'ti-loader-2 ti-spin' : 'ti-upload'}`} />
+              {uploading ? "Parsing with AI..." : "Upload PDF"}
             </button>
             <button className="btn-download" onClick={handleDownload} disabled={downloading}>
-              <i className="ti ti-download" />
+              <i className={`ti ${downloading ? 'ti-loader-2 ti-spin' : 'ti-download'}`} />
               {downloading ? "Generating..." : "Download PDF"}
             </button>
           </div>

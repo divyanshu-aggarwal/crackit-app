@@ -10,15 +10,19 @@ import com.crackit.resume.entity.*;
 import com.crackit.resume.mapper.ResumeMapper;
 import com.crackit.resume.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ResumeService {
@@ -134,7 +138,8 @@ public class ResumeService {
             return getFullResume();
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse resume: " + e.getMessage());
+            log.error("Failed to parse resume: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to parse resume: " + e.getMessage(), e);
         }
     }
 

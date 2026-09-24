@@ -16,6 +16,8 @@ export default function Login() {
   useEffect(() => {
     const saved = localStorage.getItem('crackit_remembered_email')
     if (saved) setForm(prev => ({ ...prev, email: saved }))
+    // Pre-warm backend to eliminate cold-start delay when submitting credentials
+    api.get('/api/health').catch(() => {})
   }, [])
 
   const handleSubmit = async (e) => {
@@ -181,7 +183,7 @@ export default function Login() {
             }}
           >
             {loading
-              ? <><i className="ti ti-loader" style={{ fontSize: 15 }} /> Signing in...</>
+              ? <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: 16 }} /> Signing in...</>
               : 'Sign in'
             }
           </button>
