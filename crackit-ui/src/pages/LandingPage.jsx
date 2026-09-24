@@ -1208,7 +1208,7 @@ export default function LandingPage() {
         ref={pricingRef}
         style={{
           padding: "30px 20px 90px",
-          maxWidth: 880,
+          maxWidth: 1040,
           margin: "0 auto",
           textAlign: "center",
           opacity: pricingVisible ? 1 : 0,
@@ -1217,23 +1217,25 @@ export default function LandingPage() {
         }}
       >
         <h2 style={{ fontSize: "clamp(26px, 3.4vw, 36px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px" }}>
-          Built for Developers. Free to Start.
+          Built for Developers. Transparent Pricing.
         </h2>
         <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 40px" }}>
-          No credit card traps. Everything you need to get job-ready today.
+          No hidden fees or recurring traps. Start free or accelerate your prep on your terms.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 24, textAlign: "left" }}>
-          {/* Free Tier */}
-          <div className="card-interactive" style={{ background: "#ffffff", borderRadius: 24, padding: 32, border: "1.5px solid #e2e8f0" }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Free Tier</span>
-            <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>₹0</div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Forever free for every engineer</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited Personalized Prep Roadmaps</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Interactive Milestone Tracker</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Verified Job Discovery (Adzuna + JSearch)</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> 5 AI Resume Tailoring Runs / mo</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, textAlign: "left" }}>
+          {/* Card 1: Free Tier */}
+          <div className="card-interactive" style={{ background: "#ffffff", borderRadius: 24, padding: 30, border: "1.5px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Free Tier</span>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>₹0</div>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Forever free for every engineer</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited Personalized Roadmaps</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> 16-Step Progressive Syllabus Tracker</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Verified Job Discovery (Adzuna + JSearch)</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> 3 Free AI Generations (Resume & Prep)</div>
+              </div>
             </div>
             <Link
               to="/signup"
@@ -1253,15 +1255,18 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Pro Tier */}
+          {/* Card 2: 7-Day Sprint Trial */}
           <div
             className="card-interactive"
             style={{
               background: "#ffffff",
               borderRadius: 24,
-              padding: 32,
-              border: "2px solid #7c3aed",
-              boxShadow: "0 14px 35px rgba(124, 58, 237, 0.15)",
+              padding: 30,
+              border: "1.5px solid #c4b5fd",
+              boxShadow: "0 10px 25px rgba(124, 58, 237, 0.08)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
               position: "relative"
             }}
           >
@@ -1269,7 +1274,70 @@ export default function LandingPage() {
               style={{
                 position: "absolute",
                 top: -12,
-                right: 24,
+                right: 20,
+                padding: "4px 12px",
+                background: "#6366f1",
+                color: "#fff",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: "uppercase"
+              }}
+            >
+              Sprint Trial
+            </span>
+            <div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#6366f1", textTransform: "uppercase" }}>7-Day Trial</span>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>
+                ₹99 <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>/ 7 days</span>
+              </div>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Intensive sprint for immediate interviews</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Everything in Free Tier</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited AI Resume Tailoring (7 days)</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited AI Mock Interview Drills</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Company Compatibility & Rubrics</div>
+              </div>
+            </div>
+            <Link
+              to="/signup"
+              style={{
+                display: "block",
+                padding: "12px",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                textAlign: "center",
+                textDecoration: "none",
+                boxShadow: "0 6px 16px rgba(99, 102, 241, 0.25)"
+              }}
+            >
+              Start 7-Day Trial
+            </Link>
+          </div>
+
+          {/* Card 3: 1 Month Pro */}
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 30,
+              border: "2px solid #7c3aed",
+              boxShadow: "0 14px 35px rgba(124, 58, 237, 0.15)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              position: "relative"
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: -12,
+                right: 20,
                 padding: "4px 12px",
                 background: "#7c3aed",
                 color: "#fff",
@@ -1281,16 +1349,18 @@ export default function LandingPage() {
             >
               Most Popular
             </span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase" }}>Pro Acceleration</span>
-            <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>
-              ₹999 <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>/ 3 months</span>
-            </div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Less than a single mock interview session</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Everything in Free Tier</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited AI Resume Tailoring</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited Mock Interview Simulations</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Target Company Round-by-Round Rubrics</div>
+            <div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase" }}>1-Month Pro</span>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>
+                ₹299 <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>/ month</span>
+              </div>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Full month of sustained career acceleration</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Everything in 7-Day Trial</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> 30 Days Full Unlimited Access</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Google X-Y-Z Bullet Enhancer</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Priority ATS Single-Column PDFs</div>
+              </div>
             </div>
             <Link
               to="/signup"
@@ -1307,7 +1377,7 @@ export default function LandingPage() {
                 boxShadow: "0 6px 16px rgba(124, 58, 237, 0.3)"
               }}
             >
-              Start 3-Month Sprint
+              Get 1-Month Pro
             </Link>
           </div>
         </div>

@@ -20,7 +20,7 @@ function loadRazorpayScript() {
 
 export default function UpgradeModal() {
     const { isUpgradeModalOpen, closeUpgradeModal, user, refreshProfile, isPro, isDevAdmin } = useAuth()
-    const [selectedPlan, setSelectedPlan] = useState('MONTHLY') // 'MONTHLY' | 'ANNUAL'
+    const [selectedPlan, setSelectedPlan] = useState('THREE_MONTHS') // 'TRIAL_7_DAYS' | 'MONTHLY' | 'THREE_MONTHS'
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
     const [successMsg, setSuccessMsg] = useState('')
@@ -28,19 +28,32 @@ export default function UpgradeModal() {
     if (!isUpgradeModalOpen) return null
 
     const planDetails = {
+        TRIAL_7_DAYS: {
+            id: 'TRIAL_7_DAYS',
+            name: '7-Day Trial',
+            price: '₹99',
+            period: '/ 7 days',
+            savings: null,
+            badge: 'Quick Sprint',
+            amountPaise: 9900
+        },
         MONTHLY: {
-            name: 'Monthly Pro',
+            id: 'MONTHLY',
+            name: '1 Month Pro',
             price: '₹299',
             period: '/ month',
             savings: null,
+            badge: 'Flexible',
             amountPaise: 29900
         },
-        ANNUAL: {
-            name: 'Annual Pro',
-            price: '₹1,999',
-            period: '/ year',
-            savings: 'Save 45%',
-            amountPaise: 199900
+        THREE_MONTHS: {
+            id: 'THREE_MONTHS',
+            name: '3 Months Sprint',
+            price: '₹599',
+            period: '/ 3 months',
+            savings: 'Save 33%',
+            badge: 'Best Value',
+            amountPaise: 59900
         }
     }
 
@@ -60,7 +73,7 @@ export default function UpgradeModal() {
         }
     }
 
-    const currentPlan = planDetails[selectedPlan]
+    const currentPlan = planDetails[selectedPlan] || planDetails.THREE_MONTHS
 
     const handleCheckout = async () => {
         setLoading(true)
@@ -68,50 +81,48 @@ export default function UpgradeModal() {
         setSuccessMsg('')
 
         try {
-            // 1. Create order on backend
+            // 1. Create order on backend (returns real Razorpay test order_id or fallback)
             const orderRes = await api.post('/api/payments/create-order', {
                 plan: selectedPlan
             })
 
             const orderData = orderRes.data
 
-            // 2. If backend is in mock mode or Razorpay script fails, handle simulated verification
-            if (orderData.mockMode) {
-                // Perform instant simulated verification
-                const verifyRes = await api.post('/api/payments/verify', {
-                    orderId: orderData.orderId,
-                    paymentId: 'pay_demo_' + Date.now(),
-                    signature: 'mock_signature',
-                    plan: selectedPlan
-                })
-
-                await refreshProfile()
-                setSuccessMsg('🎉 Upgrade Successful! Welcome to Crackit Pro.')
-                setTimeout(() => {
-                    closeUpgradeModal()
-                    setSuccessMsg('')
-                }, 1600)
-                setLoading(false)
-                return
-            }
-
-            // 3. Live Razorpay Flow
+            // 2. Load official Razorpay Checkout SDK
             const scriptLoaded = await loadRazorpayScript()
             if (!scriptLoaded) {
-                throw new Error('Failed to load Razorpay payment gateway. Please check your connection.')
+                // If script couldn't be loaded (e.g. adblocker), allow mock fallback if mockMode is active
+                if (orderData.mockMode) {
+                    await api.post('/api/payments/verify', {
+                        orderId: orderData.orderId,
+                        paymentId: 'pay_mock_' + Date.now(),
+                        signature: 'mock_signature',
+                        plan: selectedPlan
+                    })
+                    await refreshProfile()
+                    setSuccessMsg('🎉 Upgrade Successful! Welcome to Crackit Pro.')
+                    setTimeout(() => {
+                        closeUpgradeModal()
+                        setSuccessMsg('')
+                    }, 1600)
+                    setLoading(false)
+                    return
+                }
+                throw new Error('Failed to load Razorpay payment gateway. Please disable ad-blockers and try again.')
             }
 
+            // 3. Open official Razorpay Checkout in Test Mode
             const options = {
                 key: orderData.keyId,
                 amount: orderData.amount,
-                currency: orderData.currency,
+                currency: orderData.currency || 'INR',
                 name: 'CrackIt Platform',
-                description: `Upgrade to ${currentPlan.name}`,
+                description: `Upgrade to ${currentPlan.name} (${currentPlan.price})`,
                 order_id: orderData.orderId,
                 prefill: {
                     name: orderData.customerName || user?.fullName || '',
                     email: orderData.customerEmail || user?.email || '',
-                    contact: orderData.customerPhone || user?.phone || ''
+                    contact: orderData.customerPhone || user?.phone || '9999999999'
                 },
                 theme: {
                     color: '#7c3aed'
@@ -120,7 +131,7 @@ export default function UpgradeModal() {
                     try {
                         setLoading(true)
                         await api.post('/api/payments/verify', {
-                            orderId: response.razorpay_order_id,
+                            orderId: response.razorpay_order_id || orderData.orderId,
                             paymentId: response.razorpay_payment_id,
                             signature: response.razorpay_signature,
                             plan: selectedPlan
@@ -146,6 +157,11 @@ export default function UpgradeModal() {
             }
 
             const razorpayInstance = new window.Razorpay(options)
+            razorpayInstance.on('payment.failed', function (resp) {
+                console.warn('Payment failed:', resp.error)
+                setErrorMsg(`Payment error: ${resp.error?.description || 'Transaction cancelled or failed.'}`)
+                setLoading(false)
+            })
             razorpayInstance.open()
         } catch (err) {
             console.error('Checkout error:', err)
@@ -175,7 +191,7 @@ export default function UpgradeModal() {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: 480,
+                    maxWidth: 520,
                     background: '#ffffff',
                     borderRadius: 24,
                     boxShadow: '0 24px 60px rgba(124, 58, 237, 0.28), 0 8px 24px rgba(0, 0, 0, 0.12)',
@@ -279,44 +295,88 @@ export default function UpgradeModal() {
                         </div>
                     )}
 
-                    {/* Plan Selection Switcher */}
+                    {/* Current Plan Status Card */}
+                    <div
+                        style={{
+                            background: isPro ? '#f0fdf4' : '#f8fafc',
+                            border: isPro ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                            borderRadius: 12,
+                            padding: '8px 14px',
+                            marginBottom: 16,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: 12.5
+                        }}
+                    >
+                        <span style={{ color: '#64748b' }}>Current Status:</span>
+                        <span style={{ fontWeight: 700, color: isPro ? '#15803d' : '#1e293b' }}>
+                            {isPro ? 'CrackIt Pro Active' : `Free Tier (${user?.aiUsageCount || 0}/3 free AI credits used)`}
+                        </span>
+                    </div>
+
+                    {/* Plan Selection Switcher (3-Tier Grid) */}
                     <div
                         style={{
                             display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
                             gap: 10,
                             marginBottom: 20
                         }}
                     >
-                        {/* Monthly */}
+                        {/* 1. 7-Day Trial (99) */}
+                        <div
+                            onClick={() => setSelectedPlan('TRIAL_7_DAYS')}
+                            style={{
+                                border: selectedPlan === 'TRIAL_7_DAYS' ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                                background: selectedPlan === 'TRIAL_7_DAYS' ? 'rgba(124, 58, 237, 0.05)' : '#f8fafc',
+                                borderRadius: 14,
+                                padding: '12px 10px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                textAlign: 'center',
+                                position: 'relative'
+                            }}
+                        >
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase' }}>7 Days</div>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', marginTop: 2 }}>
+                                ₹99
+                            </div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Sprint Trial</div>
+                        </div>
+
+                        {/* 2. 1 Month (299) */}
                         <div
                             onClick={() => setSelectedPlan('MONTHLY')}
                             style={{
                                 border: selectedPlan === 'MONTHLY' ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                                background: selectedPlan === 'MONTHLY' ? 'rgba(124, 58, 237, 0.04)' : '#f8fafc',
+                                background: selectedPlan === 'MONTHLY' ? 'rgba(124, 58, 237, 0.05)' : '#f8fafc',
                                 borderRadius: 14,
-                                padding: '12px 14px',
+                                padding: '12px 10px',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
+                                textAlign: 'center',
                                 position: 'relative'
                             }}
                         >
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Monthly</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase' }}>1 Month</div>
                             <div style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', marginTop: 2 }}>
-                                ₹299 <span style={{ fontSize: 12, fontWeight: 500, color: '#94a3b8' }}>/ mo</span>
+                                ₹299
                             </div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Flexible</div>
                         </div>
 
-                        {/* Annual */}
+                        {/* 3. 3 Months (599 - Best Value) */}
                         <div
-                            onClick={() => setSelectedPlan('ANNUAL')}
+                            onClick={() => setSelectedPlan('THREE_MONTHS')}
                             style={{
-                                border: selectedPlan === 'ANNUAL' ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                                background: selectedPlan === 'ANNUAL' ? 'rgba(124, 58, 237, 0.04)' : '#f8fafc',
+                                border: selectedPlan === 'THREE_MONTHS' ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                                background: selectedPlan === 'THREE_MONTHS' ? 'rgba(124, 58, 237, 0.05)' : '#f8fafc',
                                 borderRadius: 14,
-                                padding: '12px 14px',
+                                padding: '12px 10px',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
+                                textAlign: 'center',
                                 position: 'relative'
                             }}
                         >
@@ -324,22 +384,25 @@ export default function UpgradeModal() {
                                 style={{
                                     position: 'absolute',
                                     top: -9,
-                                    right: 10,
+                                    right: '50%',
+                                    transform: 'translateX(50%)',
                                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                     color: '#ffffff',
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    padding: '2px 7px',
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    padding: '2px 6px',
                                     borderRadius: 9999,
-                                    letterSpacing: '0.02em'
+                                    letterSpacing: '0.02em',
+                                    whiteSpace: 'nowrap'
                                 }}
                             >
-                                SAVE 45%
+                                SAVE 33%
                             </span>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Annual Plan</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>3 Months</div>
                             <div style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', marginTop: 2 }}>
-                                ₹1,999 <span style={{ fontSize: 12, fontWeight: 500, color: '#94a3b8' }}>/ yr</span>
+                                ₹599
                             </div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Best Value</div>
                         </div>
                     </div>
 

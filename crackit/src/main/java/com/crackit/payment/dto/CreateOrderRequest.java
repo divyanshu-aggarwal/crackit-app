@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateOrderRequest {
 
-    @NotNull(message = "Plan type is required (MONTHLY or ANNUAL)")
+    @NotNull(message = "Plan type is required (TRIAL_7_DAYS, MONTHLY, or THREE_MONTHS)")
     private PlanType plan;
 }

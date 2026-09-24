@@ -416,7 +416,7 @@ export default function ProfilePage() {
                         fontSize: '0.85rem'
                       }}
                     >
-                      <i className="ti ti-bolt" /> Upgrade to Pro (₹299/mo)
+                      <i className="ti ti-bolt" /> Upgrade to Pro (from ₹99)
                     </button>
                     {isDevAdmin && (
                       <button
