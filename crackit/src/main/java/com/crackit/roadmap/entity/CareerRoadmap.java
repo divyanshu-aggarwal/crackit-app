@@ -49,7 +49,8 @@ public class CareerRoadmap {
     @Builder.Default
     private Integer overallProgress = 0;
 
-    @Column(name = "roadmap_json", columnDefinition = "LONGTEXT")
+    @Lob
+    @Column(name = "roadmap_json")
     private String roadmapJson;
 
     @Enumerated(EnumType.STRING)
