@@ -1,17 +1,65 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import AiLoadingOverlay from "../components/AiLoadingOverlay";
 import Card from "../components/ui/Card";
 import PageHeader from "../components/ui/PageHeader";
+
+// Preset templates for 1-click quick-start
+const PRESET_CAREER_PATHS = [
+  {
+    id: "backend-sr",
+    title: "SDE-1 ➔ Senior Backend / Staff",
+    currentRole: "Backend Developer",
+    yearsOfExperience: 2.5,
+    currentSkills: "Java, Spring Boot, MySQL, REST APIs",
+    currentCompensation: "10-12 LPA",
+    targetRole: "Senior Backend Engineer / Staff Architect",
+    targetCompensation: "32-45 LPA",
+    targetTimelineWeeks: 8,
+    targetCompanyTypes: ["Fintech Unicorns", "Tier-1 Product Startups", "Global Tech MNCs"],
+    badge: "Most Popular",
+    color: "#7c3aed"
+  },
+  {
+    id: "frontend-lead",
+    title: "Frontend ➔ UI Architect / Lead",
+    currentRole: "Frontend Engineer (React)",
+    yearsOfExperience: 2,
+    currentSkills: "JavaScript, React, Redux, CSS, HTML",
+    currentCompensation: "9-11 LPA",
+    targetRole: "Lead Frontend Engineer / UI Architect",
+    targetCompensation: "28-38 LPA",
+    targetTimelineWeeks: 6,
+    targetCompanyTypes: ["SaaS Unicorns", "Tier-1 Product Startups"],
+    badge: "High Demand",
+    color: "#2563eb"
+  },
+  {
+    id: "fullstack-founding",
+    title: "Fullstack ➔ Founding Tech Lead",
+    currentRole: "Fullstack Developer",
+    yearsOfExperience: 3,
+    currentSkills: "React, Node.js, Express, PostgreSQL, Docker",
+    currentCompensation: "12-14 LPA",
+    targetRole: "Founding Engineer / Tech Lead",
+    targetCompensation: "36-50 LPA",
+    targetTimelineWeeks: 8,
+    targetCompanyTypes: ["Tier-1 Product Startups", "Fintech Unicorns"],
+    badge: "Maximum Uplift",
+    color: "#059669"
+  }
+];
 
 export default function RoadmapPage() {
   const navigate = useNavigate();
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState("milestones"); // "milestones", "gaps", "companies", "actionPlan"
+  const [generationStep, setGenerationStep] = useState(0);
+  const [activeTab, setActiveTab] = useState("journey"); // "journey", "companies", "gaps", "actionPlan"
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState(0);
+  const [generationError, setGenerationError] = useState(null);
 
   // Form state for generating/updating roadmap
   const [formData, setFormData] = useState({
@@ -24,6 +72,26 @@ export default function RoadmapPage() {
     targetTimelineWeeks: 8,
     targetCompanyTypes: ["Fintech Unicorns", "Tier-1 Product Startups", "Global Tech MNCs"]
   });
+
+  const GENERATION_STEPS = [
+    "Analyzing target role hiring bars & market compensation...",
+    "Diagnosing technical delta across your current skill stack...",
+    "Synthesizing multi-week progressive milestones & practice drills...",
+    "Calibrating target company compatibility & interview rubrics...",
+    "Finalizing your personalized interactive career journey..."
+  ];
+
+  // Cycling generation progress ticker
+  useEffect(() => {
+    let interval;
+    if (generating) {
+      setGenerationStep(0);
+      interval = setInterval(() => {
+        setGenerationStep((prev) => (prev < GENERATION_STEPS.length - 1 ? prev + 1 : prev));
+      }, 1800);
+    }
+    return () => clearInterval(interval);
+  }, [generating]);
 
   useEffect(() => {
     fetchCurrentRoadmap();
@@ -46,36 +114,57 @@ export default function RoadmapPage() {
     }
   };
 
-  const handleGenerate = async (e) => {
-    if (e) e.preventDefault();
+  const executeGeneration = async (dataToSubmit) => {
     setGenerating(true);
+    setGenerationError(null);
     setShowConfigModal(false);
 
     try {
-      const skillsArray = typeof formData.currentSkills === "string"
-        ? formData.currentSkills.split(",").map(s => s.trim()).filter(Boolean)
-        : formData.currentSkills;
+      const skillsArray = typeof dataToSubmit.currentSkills === "string"
+        ? dataToSubmit.currentSkills.split(",").map((s) => s.trim()).filter(Boolean)
+        : dataToSubmit.currentSkills;
 
       const payload = {
-        currentRole: formData.currentRole,
-        yearsOfExperience: parseFloat(formData.yearsOfExperience) || 2.0,
+        currentRole: dataToSubmit.currentRole,
+        yearsOfExperience: parseFloat(dataToSubmit.yearsOfExperience) || 2.0,
         currentSkills: skillsArray,
-        currentCompensation: formData.currentCompensation,
-        targetRole: formData.targetRole,
-        targetCompensation: formData.targetCompensation,
-        targetTimelineWeeks: parseInt(formData.targetTimelineWeeks) || 8,
-        targetCompanyTypes: formData.targetCompanyTypes
+        currentCompensation: dataToSubmit.currentCompensation,
+        targetRole: dataToSubmit.targetRole,
+        targetCompensation: dataToSubmit.targetCompensation,
+        targetTimelineWeeks: parseInt(dataToSubmit.targetTimelineWeeks) || 8,
+        targetCompanyTypes: dataToSubmit.targetCompanyTypes
       };
 
       const res = await api.post("/api/roadmap/generate", payload);
       setRoadmap(res.data);
-      setActiveTab("milestones");
+      setActiveTab("journey");
+      setSelectedMilestoneIdx(0);
     } catch (err) {
       console.error("Failed to generate roadmap", err);
-      alert("Failed to generate career roadmap. Please try again.");
+      setGenerationError("Unable to synthesize roadmap right now. Please ensure your backend is reachable and try again.");
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleFormSubmit = (e) => {
+    if (e) e.preventDefault();
+    executeGeneration(formData);
+  };
+
+  const handleApplyPreset = (preset) => {
+    const updated = {
+      currentRole: preset.currentRole,
+      yearsOfExperience: preset.yearsOfExperience,
+      currentSkills: preset.currentSkills,
+      currentCompensation: preset.currentCompensation,
+      targetRole: preset.targetRole,
+      targetCompensation: preset.targetCompensation,
+      targetTimelineWeeks: preset.targetTimelineWeeks,
+      targetCompanyTypes: preset.targetCompanyTypes
+    };
+    setFormData(updated);
+    executeGeneration(updated);
   };
 
   const handleToggleTopic = async (topicId, currentCompleted) => {
@@ -97,21 +186,123 @@ export default function RoadmapPage() {
   const compatibleCompanies = data.compatibleCompanies || [];
   const actionPlan = data.actionPlanFirst48Hours || [];
 
+  // Determine current active milestone index (first milestone with uncompleted topics)
+  const activeMilestoneIndex = Math.max(
+    0,
+    milestones.findIndex((m) => {
+      const allDone = (m.topics || []).every((t) => t.completed);
+      return !allDone;
+    })
+  );
+
+  const selectedMilestone = milestones[selectedMilestoneIdx] || milestones[0];
+
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", paddingBottom: 60 }}>
+    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "16px 16px 80px" }}>
+      {/* ─────────────────────────────────────────────────────────────
+          AI SYNTHESIS ANIMATION OVERLAY (FULL SCREEN / CAROUSEL)
+      ───────────────────────────────────────────────────────────── */}
       {generating && (
-        <AiLoadingOverlay
-          title="Engineering Your Career Roadmap..."
-          subtitle="Analyzing technical delta, evaluating hiring bars, and synthesizing milestones."
-        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 10, 35, 0.88)",
+            backdropFilter: "blur(16px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(180deg, #1e153d 0%, #12092a 100%)",
+              border: "1px solid rgba(124, 58, 237, 0.4)",
+              borderRadius: 28,
+              padding: "44px 32px",
+              maxWidth: 540,
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.5), 0 0 50px rgba(124, 58, 237, 0.25)"
+            }}
+          >
+            {/* Orbital Particle Spinner */}
+            <div style={{ position: "relative", width: 90, height: 90, margin: "0 auto 28px" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(124, 58, 237, 0.2)",
+                  borderTopColor: "#7c3aed",
+                  borderRightColor: "#06b6d4",
+                  animation: "spin 1.2s linear infinite"
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 12,
+                  borderRadius: "50%",
+                  border: "2px dashed rgba(168, 85, 247, 0.5)",
+                  animation: "spin 3s linear infinite reverse"
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 28,
+                  color: "#a78bfa"
+                }}
+              >
+                <i className="ti ti-compass" />
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", margin: "0 0 10px", letterSpacing: -0.5 }}>
+              Synthesizing Your Career Roadmap
+            </h3>
+
+            {/* Current Step Description */}
+            <p style={{ fontSize: 14.5, color: "#c4b5fd", margin: "0 0 24px", minHeight: 44, lineHeight: 1.5 }}>
+              {GENERATION_STEPS[generationStep]}
+            </p>
+
+            {/* Dynamic Progress Bar */}
+            <div style={{ height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 999, overflow: "hidden", marginBottom: 16 }}>
+              <div
+                style={{
+                  width: `${((generationStep + 1) / GENERATION_STEPS.length) * 100}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                  borderRadius: 999,
+                  transition: "width 0.8s ease-in-out"
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: 12, color: "#94a3b8", display: "flex", justifyContent: "space-between" }}>
+              <span>Phase {generationStep + 1} of {GENERATION_STEPS.length}</span>
+              <span>Proprietary Career Intelligence</span>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Header */}
+      {/* ─────────────────────────────────────────────────────────────
+          PAGE HEADER
+      ───────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
         <div>
           <PageHeader
-            title="Career Prep Roadmap"
-            subtitle="Reverse-engineered path from your current stack to your target role & compensation."
+            title="Interactive Career Quest & Prep Roadmap"
+            subtitle="Reverse-engineered progression from your current stack to your target role & compensation."
           />
         </div>
 
@@ -121,431 +312,804 @@ export default function RoadmapPage() {
             display: "flex",
             alignItems: "center",
             gap: 8,
-            padding: "10px 20px",
+            padding: "11px 22px",
             background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
             color: "#fff",
             border: "none",
             borderRadius: 14,
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 14,
             cursor: "pointer",
-            boxShadow: "0 8px 18px rgba(124, 58, 237, 0.25)"
+            boxShadow: "0 6px 18px rgba(124, 58, 237, 0.28)",
+            transition: "transform 0.15s"
           }}
         >
           <i className="ti ti-adjustments-horizontal" style={{ fontSize: 18 }} />
-          {roadmap ? "Configure Target & Re-Generate" : "Build Your Career Roadmap"}
+          {roadmap ? "Change Target & Re-Generate" : "Build Custom Roadmap"}
         </button>
       </div>
 
+      {/* Error Banner if any */}
+      {generationError && (
+        <div
+          style={{
+            background: "#fff1f2",
+            border: "1px solid #fecdd3",
+            borderRadius: 16,
+            padding: "16px 20px",
+            marginBottom: 24,
+            color: "#e11d48",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 600 }}>
+            <i className="ti ti-alert-triangle" style={{ fontSize: 20 }} />
+            {generationError}
+          </div>
+          <button
+            onClick={() => setGenerationError(null)}
+            style={{ background: "none", border: "none", color: "#e11d48", fontWeight: 700, cursor: "pointer" }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          LOADING STATE
+      ───────────────────────────────────────────────────────────── */}
       {loading ? (
-        <div style={{ padding: 60, textAlign: "center", color: "#7c6faa" }}>
-          <i className="ti ti-loader-2 ti-spin" style={{ fontSize: 36, color: "#7c3aed", marginBottom: 16, display: "block" }} />
-          Loading your career roadmap...
+        <div style={{ padding: "80px 24px", textAlign: "center", color: "#7c6faa" }}>
+          <i className="ti ti-loader-2 ti-spin" style={{ fontSize: 40, color: "#7c3aed", marginBottom: 16, display: "block" }} />
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Loading your interactive career quest...</div>
         </div>
       ) : !roadmap ? (
-        /* Empty State / First-Time Experience */
-        <Card style={{ padding: "60px 24px", textAlign: "center", maxWidth: 760, margin: "40px auto", borderRadius: 24 }}>
-          <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: "rgba(124, 58, 237, 0.1)",
-              color: "#7c3aed",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-              fontSize: 32
-            }}
-          >
-            <i className="ti ti-compass" />
-          </div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#1a1040", margin: "0 0 10px" }}>
-            No Active Career Roadmap Yet
-          </h2>
-          <p style={{ fontSize: 15, color: "#7c6faa", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.6 }}>
-            Tell us your current role and your dream role (e.g. SDE-1 to Senior Backend Engineer at ₹30 LPA). We'll analyze current hiring bars, diagnose your exact skill gaps, match compatible companies, and build a week-by-week preparation roadmap.
-          </p>
-          <button
-            onClick={() => setShowConfigModal(true)}
-            style={{
-              padding: "13px 28px",
-              background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 16,
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: "pointer",
-              boxShadow: "0 10px 22px rgba(124, 58, 237, 0.3)"
-            }}
-          >
-            <i className="ti ti-rocket" style={{ marginRight: 8 }} />
-            Build My Personalized Roadmap
-          </button>
-        </Card>
-      ) : (
-        /* Active Roadmap Content */
-        <>
-          {/* Top Metric Cards */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: 16,
-              marginBottom: 24
-            }}
-          >
-            {/* Target Role & Package */}
-            <Card style={{ padding: 20, borderRadius: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#7c6faa", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Target Destination
-                </span>
-                <span style={{ padding: "4px 10px", borderRadius: 20, background: "rgba(124,58,237,0.1)", color: "#7c3aed", fontSize: 12, fontWeight: 700 }}>
-                  {roadmap.targetTimelineWeeks || 8} Weeks
-                </span>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", marginBottom: 4 }}>
-                {roadmap.targetRole}
-              </div>
-              <div style={{ fontSize: 14, color: "#10b981", fontWeight: 700 }}>
-                {roadmap.targetCompensation || "Top of Market"}
-              </div>
-            </Card>
+        /* ─────────────────────────────────────────────────────────────
+            EMPTY STATE: 1-CLICK PRESETS + HERO ONBOARDING
+        ───────────────────────────────────────────────────────────── */
+        <div style={{ maxWidth: 980, margin: "20px auto 60px" }}>
+          {/* Main Hero Card */}
+          <Card style={{ padding: "48px 24px sm:padding 54px 36px", textAlign: "center", borderRadius: 28, marginBottom: 36 }}>
+            <div
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 24,
+                background: "linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(6,182,212,0.15) 100%)",
+                color: "#7c3aed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: 36
+              }}
+            >
+              <i className="ti ti-route" />
+            </div>
 
-            {/* Readiness Score */}
-            <Card style={{ padding: 20, borderRadius: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#7c6faa", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Readiness Score
-                </span>
-                <span style={{ padding: "4px 10px", borderRadius: 20, background: "rgba(16, 185, 129, 0.1)", color: "#10b981", fontSize: 12, fontWeight: 700 }}>
-                  {readiness.marketDemand || "HIGH DEMAND"}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: "#7c3aed" }}>
-                  {roadmap.overallScore || 75}%
-                </span>
-                <span style={{ fontSize: 13, color: "#7c6faa" }}>
-                  Uplift: <b>{readiness.salaryUpliftPotential || "2.0x - 3.0x"}</b>
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4 }}>
-                {readiness.verdict}
-              </div>
-            </Card>
+            <h2 style={{ fontSize: "clamp(24px, 3.4vw, 34px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px", letterSpacing: -0.6 }}>
+              No Active Career Quest Yet
+            </h2>
+            <p style={{ fontSize: 15.5, color: "#64748b", maxWidth: 620, margin: "0 auto 30px", lineHeight: 1.65 }}>
+              Choose a preset below to launch your personalized career roadmap in <strong>1 click</strong>, or configure your exact stack and dream company package.
+            </p>
 
-            {/* Preparation Progress */}
-            <Card style={{ padding: 20, borderRadius: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#7c6faa", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Preparation Progress
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#7c3aed" }}>
-                  {roadmap.overallProgress || 0}%
-                </span>
-              </div>
-              {/* Progress Bar */}
-              <div style={{ height: 10, borderRadius: 999, background: "#f1f5f9", overflow: "hidden", margin: "14px 0 10px" }}>
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${roadmap.overallProgress || 0}%`,
-                    background: "linear-gradient(90deg, #8b5cf6, #7c3aed)",
-                    borderRadius: 999,
-                    transition: "width 0.4s ease"
-                  }}
-                />
-              </div>
-              <div style={{ fontSize: 12, color: "#7c6faa" }}>
-                Check off topics as you practice to track your readiness in real time.
-              </div>
-            </Card>
+            <button
+              onClick={() => setShowConfigModal(true)}
+              style={{
+                padding: "14px 32px",
+                background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 16,
+                fontWeight: 700,
+                fontSize: 15.5,
+                cursor: "pointer",
+                boxShadow: "0 10px 24px rgba(124, 58, 237, 0.32)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10
+              }}
+            >
+              <i className="ti ti-sparkles" />
+              Configure Custom Target Role
+            </button>
+          </Card>
+
+          {/* 3 Quick-Start 1-Click Preset Cards */}
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 6px" }}>
+              ⚡ Or Start with a Curated 1-Click Fast-Track
+            </h3>
+            <p style={{ fontSize: 13.5, color: "#64748b", margin: 0 }}>
+              Pre-configured with industry hiring benchmarks and week-by-week practice drills.
+            </p>
           </div>
 
-          {/* Navigation Tabs */}
-          <div style={{ display: "flex", gap: 8, borderBottom: "1px solid rgba(0,0,0,0.08)", marginBottom: 24, overflowX: "auto" }}>
-            {[
-              { id: "milestones", label: "Week-by-Week Milestones", icon: "ti-calendar-event" },
-              { id: "gaps", label: "Skill Gap Matrix", icon: "ti-chart-arrows" },
-              { id: "companies", label: "Compatible Companies", icon: "ti-building" },
-              { id: "actionPlan", label: "First 48-Hour Plan", icon: "ti-flame" }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+            {PRESET_CAREER_PATHS.map((preset) => (
+              <div
+                key={preset.id}
                 style={{
+                  background: "#ffffff",
+                  borderRadius: 22,
+                  border: "1.5px solid #ede9fe",
+                  padding: 24,
+                  boxShadow: "0 6px 20px rgba(124, 58, 237, 0.05)",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "12px 18px",
-                  background: "none",
-                  border: "none",
-                  borderBottom: activeTab === tab.id ? "3px solid #7c3aed" : "3px solid transparent",
-                  color: activeTab === tab.id ? "#7c3aed" : "#7c6faa",
-                  fontWeight: activeTab === tab.id ? 700 : 500,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap"
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  position: "relative"
                 }}
               >
-                <i className={`ti ${tab.icon}`} />
-                {tab.label}
-              </button>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        background: "rgba(124, 58, 237, 0.1)",
+                        color: preset.color,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: "uppercase"
+                      }}
+                    >
+                      {preset.badge}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>{preset.targetTimelineWeeks} Weeks</span>
+                  </div>
+
+                  <h4 style={{ fontSize: 17, fontWeight: 800, color: "#1a1040", margin: "0 0 6px" }}>
+                    {preset.title}
+                  </h4>
+                  <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, marginBottom: 12 }}>
+                    Target: ₹{preset.targetCompensation}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5, marginBottom: 18 }}>
+                    Current Stack: <strong>{preset.currentSkills}</strong>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleApplyPreset(preset)}
+                  style={{
+                    padding: "11px",
+                    borderRadius: 12,
+                    background: "#f3eeff",
+                    color: "#7c3aed",
+                    border: "1px solid #ddd6fe",
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6
+                  }}
+                >
+                  <i className="ti ti-bolt" />
+                  Launch This Path
+                </button>
+              </div>
             ))}
           </div>
-
-          {/* Tab 1: Milestones */}
-          {activeTab === "milestones" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {milestones.map((m, mIdx) => (
-                <Card key={mIdx} style={{ padding: 24, borderRadius: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
-                    <div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "4px 10px", borderRadius: 12, marginRight: 8 }}>
-                        {m.weekSpan || `Phase ${m.milestoneNumber}`}
-                      </span>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "8px 0 4px" }}>
-                        {m.title}
-                      </h3>
-                      <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-                        {m.objective}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
-                    {(m.topics || []).map((topic, tIdx) => {
-                      const isDone = !!topic.completed;
-                      return (
-                        <div
-                          key={topic.id || tIdx}
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 14,
-                            padding: 14,
-                            borderRadius: 14,
-                            background: isDone ? "rgba(16, 185, 129, 0.04)" : "#f8fafc",
-                            border: isDone ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(0,0,0,0.05)",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isDone}
-                            onChange={() => handleToggleTopic(topic.id, isDone)}
-                            style={{
-                              marginTop: 4,
-                              width: 18,
-                              height: 18,
-                              accentColor: "#7c3aed",
-                              cursor: "pointer"
-                            }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: isDone ? "#059669" : "#1e293b", textDecoration: isDone ? "line-through" : "none" }}>
-                                {topic.title}
-                              </span>
-                              {topic.estimatedHours && (
-                                <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
-                                  ~{topic.estimatedHours}h
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>
-                              <b>Concepts:</b> {topic.keyConcepts}
-                            </div>
-                            {topic.practiceTask && (
-                              <div style={{ fontSize: 12, color: "#7c3aed", background: "rgba(124,58,237,0.06)", padding: "6px 10px", borderRadius: 8 }}>
-                                <i className="ti ti-code" style={{ marginRight: 6 }} />
-                                <b>Build Drill:</b> {topic.practiceTask}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Tab 2: Skill Gaps */}
-          {activeTab === "gaps" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
-              {/* Direct Gaps */}
-              <Card style={{ padding: 22, borderRadius: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <i className="ti ti-alert-triangle" />
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: "#1a1040", margin: 0 }}>
-                    Direct Knowledge Gaps
-                  </h3>
+        </div>
+      ) : (
+        /* ─────────────────────────────────────────────────────────────
+            ACTIVE ROADMAP: DYNAMIC PROGRESS HUD + INTERACTIVE JOURNEY MAP
+        ───────────────────────────────────────────────────────────── */
+        <>
+          {/* Top Destination & Progress HUD Card */}
+          <Card style={{ padding: "26px 24px", borderRadius: 24, marginBottom: 28 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20, alignItems: "center" }}>
+              {/* Destination */}
+              <div>
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Target Destination
+                </span>
+                <div style={{ fontSize: 20, fontWeight: 900, color: "#1a1040", margin: "4px 0 2px" }}>
+                  {roadmap.targetRole}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {(skillGaps.directGaps || []).map((gap, idx) => (
-                    <div key={idx} style={{ padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fee2e2" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#991b1b" }}>{gap.skill}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", background: "#fecaca", padding: "2px 8px", borderRadius: 10 }}>
-                          {gap.severity}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#7f1d1d" }}>{gap.description}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Elimination Dealbreakers */}
-              <Card style={{ padding: 22, borderRadius: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <i className="ti ti-shield-alert" />
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: "#1a1040", margin: 0 }}>
-                    Elimination Dealbreakers
-                  </h3>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {(skillGaps.dealbreakersForTargetTier || []).map((db, idx) => (
-                    <div key={idx} style={{ padding: 12, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7" }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>
-                        {db.topic}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#78350f" }}>
-                        <b>Why Candidates Fail:</b> {db.why}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Transferable Strengths */}
-              <Card style={{ padding: 22, borderRadius: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(16, 185, 129, 0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <i className="ti ti-check" />
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: "#1a1040", margin: 0 }}>
-                    Transferable Strengths
-                  </h3>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {(skillGaps.transferableStrengths || []).map((st, idx) => (
-                    <div key={idx} style={{ padding: 12, borderRadius: 12, background: "#f0fdf4", border: "1px solid #dcfce7" }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#166534", marginBottom: 4 }}>
-                        {st.skill}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#14532d" }}>
-                        <b>Interview Leverage:</b> {st.leverage}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* Tab 3: Compatible Companies */}
-          {activeTab === "companies" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20 }}>
-              {compatibleCompanies.map((c, idx) => (
-                <Card key={idx} style={{ padding: 24, borderRadius: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <div>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 4px" }}>
-                        {c.companyName}
-                      </h3>
-                      <span style={{ fontSize: 12, color: "#7c6faa", fontWeight: 600 }}>
-                        {c.category}
-                      </span>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: "#7c3aed" }}>
-                        {c.matchScore}%
-                      </div>
-                      <span style={{ fontSize: 11, color: "#94a3b8" }}>Affinity</span>
-                    </div>
-                  </div>
-
-                  <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, margin: "0 0 14px" }}>
-                    <b>Why Matched:</b> {c.whyMatched}
-                  </p>
-
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 6 }}>
-                      Interview Rounds:
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {(c.interviewRounds || []).map((round, rIdx) => (
-                        <div key={rIdx} style={{ fontSize: 12, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
-                          <i className="ti ti-circle-check" style={{ color: "#7c3aed", fontSize: 14 }} />
-                          {round}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 6 }}>
-                      Priority Focus Topics:
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {(c.priorityTopics || []).map((topic, tIdx) => (
-                        <span key={tIdx} style={{ padding: "4px 10px", borderRadius: 8, background: "#f1f5f9", color: "#1e293b", fontSize: 11, fontWeight: 600 }}>
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Tab 4: First 48-Hour Plan */}
-          {activeTab === "actionPlan" && (
-            <Card style={{ padding: 28, borderRadius: 20, maxWidth: 800 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 12, background: "rgba(124,58,237,0.1)", color: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                  <i className="ti ti-flame" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: 0 }}>
-                    Immediate Action Items (First 48 Hours)
-                  </h3>
-                  <p style={{ fontSize: 13, color: "#7c6faa", margin: 0 }}>
-                    Small, decisive wins to break procrastination and establish momentum today.
-                  </p>
+                <div style={{ fontSize: 14, color: "#10b981", fontWeight: 800 }}>
+                  ₹{roadmap.targetCompensation || "Top of Market"} • {roadmap.targetTimelineWeeks || 8} Weeks Sprint
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {actionPlan.map((action, idx) => (
+              {/* Overall Progress Gauge */}
+              <div style={{ borderLeft: "2px solid #f1f5f9", paddingLeft: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>Overall Mastery</span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: "#7c3aed" }}>
+                    {roadmap.overallProgress || 0}%
+                  </span>
+                </div>
+                <div style={{ height: 10, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${roadmap.overallProgress || 0}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #7c3aed 0%, #10b981 100%)",
+                      borderRadius: 999,
+                      transition: "width 0.5s ease"
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 6 }}>
+                  Stage: Milestone {activeMilestoneIndex + 1} of {milestones.length}
+                </div>
+              </div>
+
+              {/* Uplift Verdict */}
+              <div style={{ borderLeft: "2px solid #f1f5f9", paddingLeft: 18 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#059669", textTransform: "uppercase" }}>
+                  Salary Uplift Potential
+                </span>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", margin: "4px 0 2px" }}>
+                  {readiness.salaryUpliftPotential || "2.5x - 3.2x"}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4 }}>
+                  Readiness Score: <strong>{readiness.overallScore || 80}/100</strong>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Navigation Sub-Tabs */}
+          <div
+            style={{
+              display: "flex",
+              borderBottom: "2px solid #ede9fe",
+              gap: 8,
+              marginBottom: 28,
+              overflowX: "auto"
+            }}
+          >
+            {[
+              { id: "journey", label: "Interactive Journey Map", icon: "ti-route" },
+              { id: "companies", label: "Compatible Companies", icon: "ti-building" },
+              { id: "gaps", label: "Skill Delta Diagnostics", icon: "ti-radar" },
+              { id: "actionPlan", label: "48-Hour Action Plan", icon: "ti-bolt" }
+            ].map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 18px",
+                    background: "none",
+                    border: "none",
+                    borderBottom: active ? "3px solid #7c3aed" : "3px solid transparent",
+                    color: active ? "#7c3aed" : "#64748b",
+                    fontWeight: active ? 800 : 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    marginBottom: -2,
+                    transition: "all 0.15s"
+                  }}
+                >
+                  <i className={`ti ${tab.icon}`} style={{ fontSize: 17 }} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 1: INTERACTIVE JOURNEY MAP WITH MOVING CANDIDATE FIGURE
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === "journey" && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 28,
+                alignItems: "start"
+              }}
+            >
+              {/* Left Column: Visual Winding Milestone Trail */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: 0 }}>
+                    Career Milestone Trail
+                  </h3>
+                  <span style={{ fontSize: 12, color: "#7c6faa", fontWeight: 600 }}>
+                    Click any station to inspect drills
+                  </span>
+                </div>
+
+                <div style={{ position: "relative", paddingLeft: 30, display: "flex", flexDirection: "column", gap: 20 }}>
+                  {/* Vertical Progress Spine */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 10,
+                      top: 24,
+                      bottom: 40,
+                      width: 4,
+                      background: "linear-gradient(180deg, #10b981 0%, #7c3aed 50%, #e2e8f0 100%)",
+                      borderRadius: 999
+                    }}
+                  />
+
+                  {milestones.map((milestone, idx) => {
+                    const topics = milestone.topics || [];
+                    const completedCount = topics.filter((t) => t.completed).length;
+                    const isAllDone = topics.length > 0 && completedCount === topics.length;
+                    const isCurrent = idx === activeMilestoneIndex;
+                    const isSelected = idx === selectedMilestoneIdx;
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedMilestoneIdx(idx)}
+                        style={{
+                          position: "relative",
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {/* Milestone Station Node on the Spine */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: -30,
+                            top: 18,
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            background: isAllDone ? "#10b981" : isCurrent ? "#7c3aed" : "#fff",
+                            border: isAllDone
+                              ? "3px solid #bbf7d0"
+                              : isCurrent
+                              ? "3px solid #ddd6fe"
+                              : "3px solid #cbd5e1",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: isAllDone || isCurrent ? "#fff" : "#94a3b8",
+                            fontSize: 11,
+                            fontWeight: 900,
+                            boxShadow: isCurrent ? "0 0 14px rgba(124, 58, 237, 0.6)" : "none",
+                            zIndex: 2
+                          }}
+                        >
+                          {isAllDone ? "✓" : idx + 1}
+                        </div>
+
+                        {/* Moving Candidate Figure Badge (anchored to active milestone) */}
+                        {isCurrent && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: -12,
+                              top: -14,
+                              background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+                              color: "#fff",
+                              borderRadius: 999,
+                              padding: "2px 8px",
+                              fontSize: 10,
+                              fontWeight: 800,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              boxShadow: "0 4px 10px rgba(124, 58, 237, 0.4)",
+                              zIndex: 3,
+                              whiteSpace: "nowrap"
+                            }}
+                          >
+                            <span>🚀</span> YOU ARE HERE
+                          </div>
+                        )}
+
+                        {/* Station Card */}
+                        <div
+                          style={{
+                            background: isSelected ? "#faf8ff" : "#ffffff",
+                            borderRadius: 18,
+                            border: isSelected
+                              ? "2px solid #7c3aed"
+                              : isCurrent
+                              ? "1.5px solid #c4b5fd"
+                              : "1.5px solid #ede9fe",
+                            padding: "18px 20px",
+                            boxShadow: isSelected
+                              ? "0 10px 24px rgba(124, 58, 237, 0.12)"
+                              : "0 4px 14px rgba(15, 23, 42, 0.03)"
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 800, color: isCurrent ? "#7c3aed" : "#64748b", textTransform: "uppercase" }}>
+                              {milestone.weekSpan || `Milestone ${idx + 1}`}
+                            </span>
+                            <span
+                              style={{
+                                padding: "3px 9px",
+                                borderRadius: 999,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                background: isAllDone ? "#dcfce7" : isCurrent ? "#ede9fe" : "#f1f5f9",
+                                color: isAllDone ? "#15803d" : isCurrent ? "#6d28d9" : "#64748b"
+                              }}
+                            >
+                              {isAllDone ? "Mastered" : isCurrent ? "Active Quest" : "Upcoming"}
+                            </span>
+                          </div>
+
+                          <h4 style={{ fontSize: 16, fontWeight: 800, color: "#1a1040", margin: "0 0 10px" }}>
+                            {milestone.title}
+                          </h4>
+
+                          {/* Mini Topic Progress Track */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ flex: 1, height: 5, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
+                              <div
+                                style={{
+                                  width: `${topics.length ? (completedCount / topics.length) * 100 : 0}%`,
+                                  height: "100%",
+                                  background: "#10b981",
+                                  borderRadius: 999
+                                }}
+                              />
+                            </div>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#64748b" }}>
+                              {completedCount}/{topics.length} Mastered
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Final Boss: Offer Station */}
+                  <div style={{ position: "relative" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: -30,
+                        top: 14,
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: "#10b981",
+                        border: "3px solid #bbf7d0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                        fontSize: 12
+                      }}
+                    >
+                      🏆
+                    </div>
+                    <div style={{ background: "#f0fdf4", border: "1.5px dashed #86efac", borderRadius: 16, padding: "14px 18px" }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#166534" }}>
+                        Final Stage: Offer Negotiation & Closing
+                      </div>
+                      <div style={{ fontSize: 12, color: "#15803d" }}>
+                        Targeting ₹{roadmap.targetCompensation || "Top of Market"} with multi-offer leverage.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Detailed Topic Inspector for the Selected Milestone */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 24,
+                  border: "1.5px solid #ede9fe",
+                  padding: 24,
+                  boxShadow: "0 10px 30px rgba(124, 58, 237, 0.06)",
+                  position: "sticky",
+                  top: 90
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+                  <div>
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase" }}>
+                      Milestone Detail Inspector
+                    </span>
+                    <h3 style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", margin: "4px 0 2px" }}>
+                      {selectedMilestone?.title || "Milestone Details"}
+                    </h3>
+                    <div style={{ fontSize: 13, color: "#64748b" }}>
+                      {selectedMilestone?.weekSpan} • Check topics to advance candidate progress
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      background: "#f3eeff",
+                      color: "#7c3aed",
+                      fontWeight: 800,
+                      fontSize: 12
+                    }}
+                  >
+                    Station {selectedMilestoneIdx + 1}
+                  </span>
+                </div>
+
+                {/* Topics in Selected Milestone */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {(selectedMilestone?.topics || []).map((topic) => {
+                    const isDone = !!topic.completed;
+                    return (
+                      <div
+                        key={topic.id}
+                        style={{
+                          background: isDone ? "#fafafa" : "#ffffff",
+                          borderRadius: 16,
+                          border: isDone ? "1px solid #e2e8f0" : "1.5px solid #ede9fe",
+                          padding: "16px 18px",
+                          boxShadow: isDone ? "none" : "0 4px 12px rgba(124, 58, 237, 0.04)",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                          {/* Toggle Checkbox */}
+                          <button
+                            onClick={() => handleToggleTopic(topic.id, isDone)}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 8,
+                              background: isDone ? "#10b981" : "#ffffff",
+                              border: isDone ? "none" : "2px solid #cbd5e1",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#fff",
+                              fontSize: 14,
+                              cursor: "pointer",
+                              marginTop: 2,
+                              flexShrink: 0
+                            }}
+                          >
+                            {isDone && <i className="ti ti-check" />}
+                          </button>
+
+                          <div style={{ flex: 1 }}>
+                            <div
+                              style={{
+                                fontSize: 15,
+                                fontWeight: 800,
+                                color: isDone ? "#64748b" : "#1a1040",
+                                textDecoration: isDone ? "line-through" : "none"
+                              }}
+                            >
+                              {topic.title}
+                            </div>
+
+                            <div style={{ fontSize: 13, color: "#64748b", margin: "4px 0 10px", lineHeight: 1.5 }}>
+                              <strong>Architecture Concepts:</strong> {topic.keyConcepts}
+                            </div>
+
+                            {/* Interview Drill Prompt */}
+                            <div
+                              style={{
+                                background: "#f8fafc",
+                                borderRadius: 12,
+                                padding: "10px 14px",
+                                border: "1px solid #e2e8f0",
+                                fontSize: 12,
+                                color: "#334155"
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, color: "#475569", marginBottom: 3 }}>
+                                🎯 Expected Interview Question:
+                              </div>
+                              <div style={{ fontStyle: "italic" }}>
+                                "How would you design a fault-tolerant {topic.title.toLowerCase()} that guarantees data consistency under network partitions?"
+                              </div>
+                            </div>
+
+                            {/* Direct Mock Interview Action Button */}
+                            <button
+                              onClick={() => navigate("/interviews")}
+                              style={{
+                                marginTop: 10,
+                                padding: "6px 12px",
+                                borderRadius: 10,
+                                background: "none",
+                                border: "1px solid #ddd6fe",
+                                color: "#7c3aed",
+                                fontSize: 11.5,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6
+                              }}
+                            >
+                              <i className="ti ti-message-2-code" />
+                              Practice This Question in Mock Chat
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 2: COMPATIBLE COMPANIES MATRIX
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === "companies" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
+              {compatibleCompanies.map((comp, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: 22,
+                    border: "1.5px solid #ede9fe",
+                    padding: 24,
+                    boxShadow: "0 6px 20px rgba(124, 58, 237, 0.05)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between"
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase" }}>
+                        {comp.category || "Tech Unicorn"}
+                      </span>
+                      <span
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          fontSize: 12,
+                          fontWeight: 800
+                        }}
+                      >
+                        {comp.matchScore || 90}% Compatibility
+                      </span>
+                    </div>
+
+                    <h4 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
+                      {comp.companyName}
+                    </h4>
+
+                    <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5, marginBottom: 16 }}>
+                      {comp.whyMatched}
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#faf8ff", borderRadius: 14, padding: "12px 14px", border: "1px solid #ede9fe" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", marginBottom: 4 }}>
+                      Interview Round Focus
+                    </div>
+                    <div style={{ fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
+                      Machine Coding (LLD) • Distributed Systems • Concurrency Bar-Raiser
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 3: SKILL DELTA DIAGNOSTICS
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === "gaps" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+              {/* Critical Missing Skills */}
+              <Card style={{ padding: 24, borderRadius: 20 }}>
+                <h4 style={{ fontSize: 17, fontWeight: 800, color: "#e11d48", margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <i className="ti ti-alert-circle" />
+                  High-Priority Technical Deltas
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(skillGaps.criticalMissing || [
+                    "Distributed Consensus & Raft",
+                    "Redis Sliding Window Rate Limiting",
+                    "Idempotent Webhook Settlement",
+                    "HTAP & Columnar Storage"
+                  ]).map((skill, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "10px 14px",
+                        background: "#fff1f2",
+                        borderRadius: 12,
+                        border: "1px solid #fecdd3",
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: "#9f1239"
+                      }}
+                    >
+                      • {skill}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Already Strong Skills */}
+              <Card style={{ padding: 24, borderRadius: 20 }}>
+                <h4 style={{ fontSize: 17, fontWeight: 800, color: "#059669", margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <i className="ti ti-circle-check" />
+                  Validated Foundational Strengths
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(skillGaps.alreadyStrong || [
+                    "REST API Design & Validation",
+                    "Relational Schema Design (MySQL / JPA)",
+                    "Core OOP & Java Fundamentals"
+                  ]).map((skill, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "10px 14px",
+                        background: "#f0fdf4",
+                        borderRadius: 12,
+                        border: "1px solid #bbf7d0",
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: "#166534"
+                      }}
+                    >
+                      ✓ {skill}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 4: 48-HOUR ACTION PLAN
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === "actionPlan" && (
+            <Card style={{ padding: 28, borderRadius: 22 }}>
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 6px" }}>
+                  Immediate 48-Hour Action Plan
+                </h3>
+                <p style={{ fontSize: 13.5, color: "#64748b", margin: 0 }}>
+                  Quick-yield tactical drills to jumpstart your interview preparation momentum.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {(actionPlan.length ? actionPlan : [
+                  "Implement a Redis sliding window log rate limiter using an atomic Lua script.",
+                  "Refactor candidate resume bullets to strictly follow the Google X-Y-Z formula with diverse metrics.",
+                  "Solve 2 concurrency machine coding exercises focusing on thread synchronization and deadlock prevention.",
+                  "Review TiDB HTAP architecture documentation to articulate hybrid transactional/analytical trade-offs."
+                ]).map((action, idx) => (
                   <div
                     key={idx}
                     style={{
                       display: "flex",
                       alignItems: "flex-start",
                       gap: 14,
-                      padding: 16,
+                      padding: "14px 18px",
                       borderRadius: 14,
-                      background: "#faf5ff",
-                      border: "1px solid rgba(124,58,237,0.15)"
+                      background: "#faf8ff",
+                      border: "1px solid #ede9fe"
                     }}
                   >
                     <div
                       style={{
-                        width: 26,
-                        height: 26,
+                        width: 24,
+                        height: 24,
                         borderRadius: "50%",
                         background: "#7c3aed",
                         color: "#fff",
@@ -559,7 +1123,7 @@ export default function RoadmapPage() {
                     >
                       {idx + 1}
                     </div>
-                    <div style={{ fontSize: 14, color: "#2e1065", lineHeight: 1.5, fontWeight: 500 }}>
+                    <div style={{ fontSize: 14, color: "#2e1065", lineHeight: 1.5, fontWeight: 600 }}>
                       {action}
                     </div>
                   </div>
@@ -570,14 +1134,16 @@ export default function RoadmapPage() {
         </>
       )}
 
-      {/* Target Configuration Modal */}
+      {/* ─────────────────────────────────────────────────────────────
+          TARGET CONFIGURATION MODAL
+      ───────────────────────────────────────────────────────────── */}
       {showConfigModal && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 10, 35, 0.45)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(15, 10, 35, 0.55)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -588,10 +1154,10 @@ export default function RoadmapPage() {
           <div
             style={{
               background: "#fff",
-              borderRadius: 24,
-              padding: 28,
+              borderRadius: 26,
+              padding: 30,
               width: "100%",
-              maxWidth: 580,
+              maxWidth: 600,
               maxHeight: "90vh",
               overflowY: "auto",
               boxShadow: "0 25px 60px rgba(26,16,64,0.3)"
@@ -609,7 +1175,7 @@ export default function RoadmapPage() {
               </button>
             </div>
 
-            <form onSubmit={handleGenerate} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <form onSubmit={handleFormSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#475569", display: "block", marginBottom: 6 }}>
@@ -705,7 +1271,7 @@ export default function RoadmapPage() {
                 <button
                   type="submit"
                   style={{
-                    padding: "10px 22px",
+                    padding: "10px 24px",
                     borderRadius: 12,
                     background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
                     color: "#fff",
@@ -715,7 +1281,7 @@ export default function RoadmapPage() {
                     boxShadow: "0 8px 18px rgba(124, 58, 237, 0.25)"
                   }}
                 >
-                  Generate Roadmap
+                  Synthesize My Roadmap
                 </button>
               </div>
             </form>

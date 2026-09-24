@@ -9,36 +9,28 @@ export default function AppLayout() {
 
   const [visible, setVisible] = useState(false)
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 568)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+  const [isTablet, setIsTablet] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1100 : false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const [isTablet, setIsTablet] = useState(
-  window.innerWidth >= 568 && window.innerWidth < 1100
-)
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768
+      const tablet = window.innerWidth >= 768 && window.innerWidth < 1100
 
+      setIsMobile(mobile)
+      setIsTablet(tablet)
 
-  const [sidebarOpen, setSidebarOpen] =
-    useState(false)
+      if (!tablet) setSidebarOpen(false)
+    }
 
-useEffect(() => {
-  const handleResize = () => {
-    const mobile = window.innerWidth < 768
-    const tablet = window.innerWidth >= 768 && window.innerWidth < 1100
-
-    setIsMobile(mobile)
-    setIsTablet(tablet)
-
-    if (!tablet) setSidebarOpen(false)
-  }
-
-  window.addEventListener('resize', handleResize)
-  return () => window.removeEventListener('resize', handleResize)
-}, [])
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     setVisible(false)
-
     const t = setTimeout(() => setVisible(true), 30)
-
     return () => clearTimeout(t)
   }, [location.pathname])
 
@@ -54,10 +46,10 @@ useEffect(() => {
       style={{
         display: 'flex',
         minHeight: '100vh',
-        padding: 14,
+        padding: isMobile ? 0 : 14,
         gap: 0,
         position: 'relative',
-        overflow: 'hidden'
+        overflowX: 'hidden'
       }}
     >
       {/* Dark overlay */}
@@ -73,32 +65,30 @@ useEffect(() => {
           }}
         />
       )}
-{!isMobile && (
-  <Sidebar
-    tablet={isTablet}
-    open={sidebarOpen}
-    onToggle={() => setSidebarOpen(prev => !prev)}
-    onClose={() => setSidebarOpen(false)}
-  />
-)}
+
+      {!isMobile && (
+        <Sidebar
+          tablet={isTablet}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(prev => !prev)}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
 
       <main
         className="smart-scroll"
         style={{
           flex: 1,
           minWidth: 0,
-
-          marginLeft: isTablet ? 70 : -10,
-          padding: isMobile ? '22px 5px 126px 16px' : '28px 32px',
+          width: '100%',
+          boxSizing: 'border-box',
+          marginLeft: isMobile ? 0 : isTablet ? 70 : 0,
+          padding: isMobile ? '16px 16px 110px 16px' : '28px 32px',
           background: 'transparent',
           boxShadow: 'none',
-          borderRadius: 18,
-
+          borderRadius: isMobile ? 0 : 18,
           overflowY: 'auto',
-          
-
-          minHeight: 'calc(100vh - 28px)',
-
+          minHeight: '100vh',
           position: 'relative'
         }}
       >

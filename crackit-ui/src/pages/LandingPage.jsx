@@ -2,39 +2,151 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
+// Trajectory presets for the interactive Career Growth Graph
+const TRAJECTORY_DATA = {
+  backend: {
+    label: "Backend / Distributed Systems",
+    currentRole: "SDE-1 / Junior Backend",
+    currentPackage: "₹10 - 12 LPA",
+    targetRole: "Senior Backend / Staff Architect",
+    targetPackage: "₹34 - 48 LPA",
+    multiplier: "3.2x",
+    weeks: "8 Weeks",
+    skills: ["Distributed Locks & Lua", "Kafka Partitioning & EDA", "TiDB / Sharding", "High Concurrency"],
+    graphPoints: [
+      { step: "Current", val: 20, tag: "REST APIs / Monolith" },
+      { step: "Week 2", val: 38, tag: "Lock Contention & Redis" },
+      { step: "Week 4", val: 58, tag: "EDA & Idempotency" },
+      { step: "Week 6", val: 78, tag: "Consensus & Raft" },
+      { step: "Target", val: 100, tag: "Staff Offer: ₹42 LPA" }
+    ]
+  },
+  frontend: {
+    label: "Frontend / Web Architecture",
+    currentRole: "Frontend Engineer (React)",
+    currentPackage: "₹9 - 11 LPA",
+    targetRole: "Lead Frontend / UI Architect",
+    targetPackage: "₹30 - 42 LPA",
+    multiplier: "3.1x",
+    weeks: "6 Weeks",
+    skills: ["Micro-Frontends & Module Fed", "Core Web Vitals (LCP/INP)", "State Machines & Offline First", "AST & Tooling"],
+    graphPoints: [
+      { step: "Current", val: 20, tag: "Component UI / Redux" },
+      { step: "Week 2", val: 42, tag: "CWV & Performance" },
+      { step: "Week 4", val: 65, tag: "State Sync & WebSockets" },
+      { step: "Week 6", val: 82, tag: "Micro-Frontend Engine" },
+      { step: "Target", val: 100, tag: "Lead Offer: ₹36 LPA" }
+    ]
+  },
+  fullstack: {
+    label: "Full-Stack Tech Lead",
+    currentRole: "Fullstack Developer (MERN)",
+    currentPackage: "₹11 - 13 LPA",
+    targetRole: "Founding Engineer / Tech Lead",
+    targetPackage: "₹36 - 52 LPA",
+    multiplier: "3.4x",
+    weeks: "8 Weeks",
+    skills: ["Fullstack System Design", "Zero-Cost Cloud Topology", "Event Sourcing & CQRS", "AI Workflow Orchestration"],
+    graphPoints: [
+      { step: "Current", val: 22, tag: "CRUD & Simple DB" },
+      { step: "Week 2", val: 45, tag: "Distributed Cache & Auth" },
+      { step: "Week 4", val: 68, tag: "Async Queues & Sagas" },
+      { step: "Week 6", val: 84, tag: "Resilience & Security" },
+      { step: "Target", val: 100, tag: "Lead Offer: ₹46 LPA" }
+    ]
+  },
+  devops: {
+    label: "DevOps & Cloud Architect",
+    currentRole: "Cloud / DevOps Engineer",
+    currentPackage: "₹12 - 14 LPA",
+    targetRole: "Staff Site Reliability / Cloud Architect",
+    targetPackage: "₹38 - 55 LPA",
+    multiplier: "3.3x",
+    weeks: "8 Weeks",
+    skills: ["Kubernetes Operator Patterns", "GitOps & ArgoCD", "Multi-Region Zero-RPO", "Chaos Engineering"],
+    graphPoints: [
+      { step: "Current", val: 25, tag: "Docker & Basic CI/CD" },
+      { step: "Week 2", val: 48, tag: "K8s Mesh & Ingress" },
+      { step: "Week 4", val: 70, tag: "Observability & OpenTelemetry" },
+      { step: "Week 6", val: 86, tag: "Multi-Region DR" },
+      { step: "Target", val: 100, tag: "Staff Offer: ₹48 LPA" }
+    ]
+  }
+};
+
+// Lightweight, GPU-accelerated scroll reveal observer hook
+function useScrollReveal() {
+  const [element, setElement] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+
+  return [setElement, isVisible];
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [selectedDiscipline, setSelectedDiscipline] = useState("backend");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sampleRoadmap, setSampleRoadmap] = useState(null);
-  const [selectedRole, setSelectedRole] = useState("backend");
   const [checkedTopics, setCheckedTopics] = useState({ "s-1": true, "s-2": true });
+
+  const [growthRef, growthVisible] = useScrollReveal();
+  const [featuresRef, featuresVisible] = useScrollReveal();
+  const [roadmapRef, roadmapVisible] = useScrollReveal();
+  const [pricingRef, pricingVisible] = useScrollReveal();
+
+  const activeTrajectory = TRAJECTORY_DATA[selectedDiscipline];
 
   useEffect(() => {
     api.get("/api/roadmap/sample")
       .then(res => setSampleRoadmap(res.data))
       .catch(() => {
-        // Fallback demo data if backend is starting
+        // Fallback robust demo data
         setSampleRoadmap({
           targetRole: "Senior Backend Engineer / Staff Architect",
           targetCompensation: "₹35 - 45 LPA ($140k - $180k)",
           readiness: {
-            overallScore: 78,
-            verdict: "Strong architectural foundation; requires sharpening distributed concurrency & LLD machine coding.",
-            salaryUpliftPotential: "2.5x - 3.2x"
+            overallScore: 84,
+            verdict: "Strong foundational logic; sharpen distributed concurrency, idempotency guarantees, and cache consistency.",
+            salaryUpliftPotential: "2.8x - 3.5x"
           },
           milestones: [
             {
-              title: "Low-Level Design (LLD) & Concurrency Mastery",
+              title: "Concurrency & Storage Engine Mastery",
               weekSpan: "Weeks 1 - 2",
               topics: [
-                { id: "s-1", title: "Thread Pools & Lock Contention", keyConcepts: "ReentrantLock, synchronized, Atomic variables" },
-                { id: "s-2", title: "Distributed Rate Limiter Implementation", keyConcepts: "Redis Sorted Sets, Atomic Lua scripts, HTTP 429" },
-                { id: "s-3", title: "Idempotent Webhook Processing Engine", keyConcepts: "HMAC-SHA256 verification, distributed deduplication" }
+                { id: "s-1", title: "Distributed Locks & Redis Lua Scripts", keyConcepts: "Atomic execution, TTL safety, fail-open design" },
+                { id: "s-2", title: "Financial Webhook Idempotency", keyConcepts: "HMAC-SHA256 signature, row-level locks, state machines" },
+                { id: "s-3", title: "Cache Stampede & Mutex Invalidation", keyConcepts: "TTL jitter, negative caching, cache-aside" }
+              ]
+            },
+            {
+              title: "Distributed Systems & Event-Driven Architecture",
+              weekSpan: "Weeks 3 - 4",
+              topics: [
+                { id: "s-4", title: "Kafka Partitioning & Consumer Groups", keyConcepts: "At-least-once semantics, consumer rebalancing, DLQs" },
+                { id: "s-5", title: "HTAP Databases & Consensus Protocols", keyConcepts: "Raft consensus, TiKV row-store, TiFlash columnar scans" }
               ]
             }
           ],
           compatibleCompanies: [
-            { companyName: "Razorpay / PhonePe", category: "Fintech Unicorn", matchScore: 92, whyMatched: "Values deep JVM transaction isolation and zero payment loss." },
-            { companyName: "Swiggy / Zepto", category: "Quick-Commerce", matchScore: 89, whyMatched: "Massive write concurrency and sub-100ms API latency." }
+            { companyName: "Razorpay / PhonePe", category: "Fintech Unicorn", matchScore: 94, whyMatched: "Demands zero payment loss and deep JVM concurrency mastery." },
+            { companyName: "Swiggy / Zepto", category: "Quick-Commerce", matchScore: 90, whyMatched: "Requires sub-50ms distributed rate limiting and high-write pipelines." },
+            { companyName: "Uber / Atlassian", category: "Global Tech Tier-1", matchScore: 88, whyMatched: "Focuses on event-driven architecture and multi-datacenter consistency." }
           ]
         });
       });
@@ -45,61 +157,62 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fcfbfe", color: "#1a1040", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      {/* Navigation */}
+    <div style={{ minHeight: "100vh", background: "#fdfcfe", color: "#1a1040", fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      {/* ─────────────────────────────────────────────────────────────
+          1. RESPONSIVE NAVIGATION
+      ───────────────────────────────────────────────────────────── */}
       <nav
         style={{
           position: "sticky",
           top: 0,
           zIndex: 100,
-          background: "rgba(255, 255, 255, 0.85)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(255, 255, 255, 0.92)",
+          backdropFilter: "blur(14px)",
           borderBottom: "1px solid rgba(124, 58, 237, 0.08)",
-          padding: "16px 24px"
+          padding: "14px 20px"
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          {/* Logo */}
+        <div style={{ maxWidth: 1240, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {/* Logo with Bullseye & Target (Matches /favicon.png) */}
           <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 900,
-                fontSize: 18
-              }}
-            >
-              C
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 900, color: "#1a1040", letterSpacing: -0.5 }}>
-              Crack<span style={{ color: "#7c3aed" }}>It</span>
+            <img
+              src="/favicon.png"
+              alt="CrackIt"
+              style={{ width: 38, height: 38, objectFit: "contain" }}
+            />
+            <span style={{ fontSize: 23, fontWeight: 800, color: "#1a1040", letterSpacing: -0.8 }}>
+              Crack<span style={{ color: "#7c3aed" }}>!t</span>
             </span>
           </Link>
 
-          {/* Desktop Nav Links */}
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <a href="#features" style={{ color: "#64748b", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Features</a>
-            <a href="#roadmap-preview" style={{ color: "#64748b", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Roadmap Preview</a>
-            <a href="#pricing" style={{ color: "#64748b", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Free vs Pro</a>
+          {/* Desktop Nav Links (Hidden on mobile) */}
+          <div className="hidden md:flex" style={{ alignItems: "center", gap: 32 }}>
+            <a href="#features" style={{ color: "#475569", textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "color 0.2s" }}>
+              Features
+            </a>
+            <a href="#growth-engine" style={{ color: "#475569", textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "color 0.2s" }}>
+              Career Growth Simulator
+            </a>
+            <a href="#roadmap-preview" style={{ color: "#475569", textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "color 0.2s" }}>
+              Live Roadmap
+            </a>
+            <a href="#pricing" style={{ color: "#475569", textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "color 0.2s" }}>
+              Free vs Pro
+            </a>
           </div>
 
-          {/* Action CTAs */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Desktop Action Buttons */}
+          <div className="hidden md:flex" style={{ alignItems: "center", gap: 14 }}>
             <Link
               to="/login"
               style={{
-                padding: "8px 16px",
+                padding: "8px 18px",
                 color: "#7c3aed",
                 textDecoration: "none",
                 fontSize: 14,
                 fontWeight: 700,
-                borderRadius: 12
+                borderRadius: 12,
+                transition: "background 0.2s"
               }}
             >
               Log in
@@ -107,407 +220,1103 @@ export default function LandingPage() {
             <Link
               to="/signup"
               style={{
-                padding: "9px 18px",
+                padding: "10px 22px",
                 background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
                 color: "#fff",
                 textDecoration: "none",
                 fontSize: 14,
                 fontWeight: 700,
-                borderRadius: 12,
-                boxShadow: "0 6px 16px rgba(124, 58, 237, 0.25)"
+                borderRadius: 14,
+                boxShadow: "0 6px 18px rgba(124, 58, 237, 0.3)",
+                transition: "transform 0.15s, box-shadow 0.15s"
               }}
             >
               Get Started Free
             </Link>
           </div>
-        </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section style={{ padding: "70px 24px 50px", textAlign: "center", maxWidth: 900, margin: "0 auto" }}>
-        {/* Eyebrow Pill */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "6px 14px",
-            background: "rgba(124, 58, 237, 0.08)",
-            border: "1px solid rgba(124, 58, 237, 0.2)",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#7c3aed",
-            marginBottom: 20
-          }}
-        >
-          <span style={{ fontSize: 14 }}>🚀</span>
-          Zero-Cost Tech Career Acceleration Engine
-        </div>
-
-        {/* Headline */}
-        <h1
-          style={{
-            fontSize: "clamp(32px, 5vw, 54px)",
-            fontWeight: 900,
-            color: "#1a1040",
-            lineHeight: 1.15,
-            letterSpacing: -1,
-            margin: "0 0 20px"
-          }}
-        >
-          Land Your Next Senior Tech Role with{" "}
-          <span
-            style={{
-              background: "linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent"
-            }}
-          >
-            Precision AI Coaching
-          </span>
-        </h1>
-
-        {/* Subtitle */}
-        <p
-          style={{
-            fontSize: "clamp(16px, 2vw, 19px)",
-            color: "#64748b",
-            lineHeight: 1.6,
-            maxWidth: 720,
-            margin: "0 auto 32px"
-          }}
-        >
-          Reverse-engineer the path from your current stack to your dream package. Get week-by-week prep roadmaps, Google X-Y-Z formula resume tailoring, and bar-raiser mock interview simulations.
-        </p>
-
-        {/* Hero CTAs */}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 36 }}>
-          <Link
-            to="/signup"
-            style={{
-              padding: "14px 30px",
-              background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
-              color: "#fff",
-              textDecoration: "none",
-              fontSize: 16,
-              fontWeight: 700,
-              borderRadius: 16,
-              boxShadow: "0 10px 24px rgba(124, 58, 237, 0.35)",
-              display: "flex",
-              alignItems: "center",
-              gap: 8
-            }}
-          >
-            Build My Free Career Roadmap
-            <i className="ti ti-arrow-right" />
-          </Link>
-          <Link
-            to="/login"
-            style={{
-              padding: "14px 24px",
-              background: "#fff",
-              color: "#1a1040",
-              border: "1px solid #e2e8f0",
-              textDecoration: "none",
-              fontSize: 15,
-              fontWeight: 700,
-              borderRadius: 16,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
-            }}
-          >
-            Sign In with Google
-          </Link>
-        </div>
-
-        {/* Social Proof / Guarantee */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, fontSize: 13, color: "#64748b", flexWrap: "wrap" }}>
-          <span>✓ 100% Free Forever Tier</span>
-          <span>✓ Google X-Y-Z Resume Standards</span>
-          <span>✓ Zero Generic Fluff</span>
-        </div>
-      </section>
-
-      {/* Interactive Roadmap Demo Section */}
-      <section id="roadmap-preview" style={{ padding: "40px 24px 80px", maxWidth: 1040, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 30 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
-            See How CrackIt Reverse-Engineers Your Roadmap
-          </h2>
-          <p style={{ fontSize: 15, color: "#64748b", margin: 0 }}>
-            Try this interactive sample for a <b>Backend Engineer (2 YOE)</b> targeting <b>₹35 LPA / $150k</b>.
-          </p>
-        </div>
-
-        {/* Roadmap Preview Card */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 24,
-            padding: "clamp(20px, 4vw, 36px)",
-            boxShadow: "0 20px 50px rgba(124, 58, 237, 0.08)",
-            border: "1px solid rgba(124, 58, 237, 0.12)"
-          }}
-        >
-          {/* Header row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #f1f5f9", paddingBottom: 20, marginBottom: 20 }}>
-            <div>
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "4px 10px", borderRadius: 10 }}>
-                8-Week Sprint
-              </span>
-              <h3 style={{ fontSize: 22, fontWeight: 800, color: "#1a1040", margin: "10px 0 4px" }}>
-                {sampleRoadmap?.targetRole || "Senior Backend Engineer"}
-              </h3>
-              <div style={{ fontSize: 14, color: "#10b981", fontWeight: 700 }}>
-                Target Package: {sampleRoadmap?.targetCompensation || "₹35 - 45 LPA"}
-              </div>
-            </div>
-
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 26, fontWeight: 900, color: "#7c3aed" }}>
-                {sampleRoadmap?.readiness?.overallScore || 78}%
-              </div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>Readiness Score • <b>2.5x-3.2x Uplift</b></div>
-            </div>
-          </div>
-
-          {/* Compatible Companies Preview */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: 10 }}>
-              Top Matched Companies:
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-              {(sampleRoadmap?.compatibleCompanies || []).map((c, i) => (
-                <div key={i} style={{ padding: 14, borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 800, color: "#1e293b", fontSize: 15 }}>{c.companyName}</span>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed" }}>{c.matchScore}% Match</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>{c.whyMatched}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Interactive Week-by-Week Topics */}
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: 10 }}>
-              Interactive Week 1-2 Practice Drill (Try clicking checkboxes!):
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {sampleRoadmap?.milestones?.[0]?.topics?.map((topic) => {
-                const isChecked = !!checkedTopics[topic.id];
-                return (
-                  <div
-                    key={topic.id}
-                    onClick={() => toggleTopic(topic.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: 12,
-                      borderRadius: 12,
-                      background: isChecked ? "rgba(16, 185, 129, 0.05)" : "#fff",
-                      border: isChecked ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #e2e8f0",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => {}}
-                      style={{ width: 18, height: 18, accentColor: "#7c3aed", cursor: "pointer" }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: isChecked ? "#059669" : "#1e293b", textDecoration: isChecked ? "line-through" : "none" }}>
-                        {topic.title}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>
-                        {topic.keyConcepts}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: isChecked ? "#10b981" : "#94a3b8" }}>
-                      {isChecked ? "COMPLETED" : "CLICK TO COMPLETE"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Teaser CTA */}
-          <div style={{ marginTop: 28, textAlign: "center", padding: "20px 0 0", borderTop: "1px solid #f1f5f9" }}>
+          {/* Mobile Right Controls (Hamburger & Quick CTA) */}
+          <div className="flex md:hidden" style={{ alignItems: "center", gap: 10 }}>
             <Link
               to="/signup"
               style={{
-                display: "inline-flex",
+                padding: "8px 14px",
+                background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+                color: "#fff",
+                textDecoration: "none",
+                fontSize: 12.5,
+                fontWeight: 700,
+                borderRadius: 10,
+                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.25)"
+              }}
+            >
+              Get Started
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle Navigation"
+              style={{
+                background: "#f1f5f9",
+                border: "none",
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1e1b4b",
+                cursor: "pointer",
+                fontSize: 20
+              }}
+            >
+              <i className={mobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Dropdown Drawer */}
+        {mobileMenuOpen && (
+          <div
+            className="md:hidden"
+            style={{
+              padding: "18px 12px",
+              marginTop: 12,
+              background: "#ffffff",
+              borderRadius: 18,
+              border: "1px solid #ede9fe",
+              boxShadow: "0 14px 30px rgba(124, 58, 237, 0.12)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12
+            }}
+          >
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ padding: "8px 12px", color: "#334155", textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+            >
+              Features
+            </a>
+            <a
+              href="#growth-engine"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ padding: "8px 12px", color: "#334155", textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+            >
+              Career Growth Simulator
+            </a>
+            <a
+              href="#roadmap-preview"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ padding: "8px 12px", color: "#334155", textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+            >
+              Live Roadmap
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ padding: "8px 12px", color: "#334155", textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+            >
+              Free vs Pro
+            </a>
+            <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+            <Link
+              to="/login"
+              style={{ padding: "8px 12px", color: "#7c3aed", textDecoration: "none", fontSize: 14, fontWeight: 700 }}
+            >
+              Log in to Account
+            </Link>
+          </div>
+        )}
+      </nav>
+
+      {/* ─────────────────────────────────────────────────────────────
+          2. HERO SECTION WITH AMBIENT GLOW & BALANCED COPY
+      ───────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          padding: "60px 20px 40px",
+          textAlign: "center"
+        }}
+      >
+        {/* Soft Radial Ambient Glow */}
+        <div
+          className="animate-pulse-glow"
+          style={{
+            position: "absolute",
+            top: "-15%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "90vw",
+            maxWidth: 1100,
+            height: 520,
+            background: "radial-gradient(circle at 50% 30%, rgba(124, 58, 237, 0.18) 0%, rgba(99, 102, 241, 0.10) 40%, transparent 70%)",
+            filter: "blur(60px)",
+            pointerEvents: "none",
+            zIndex: 0
+          }}
+        />
+
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 940, margin: "0 auto" }}>
+          {/* Eyebrow Badge */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "7px 16px",
+              background: "rgba(124, 58, 237, 0.08)",
+              border: "1px solid rgba(124, 58, 237, 0.22)",
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#7c3aed",
+              marginBottom: 24,
+              boxShadow: "0 2px 8px rgba(124, 58, 237, 0.08)"
+            }}
+          >
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }} />
+            Autonomous Career Acceleration & Interview Intelligence
+          </div>
+
+          {/* Main Headline */}
+          <h1
+            style={{
+              fontSize: "clamp(32px, 5.2vw, 56px)",
+              fontWeight: 900,
+              color: "#1a1040",
+              lineHeight: 1.15,
+              letterSpacing: -1.2,
+              margin: "0 0 20px"
+            }}
+          >
+            Land Your Next Senior Tech Role With{" "}
+            <span
+              style={{
+                background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #06b6d4 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent"
+              }}
+            >
+              Precision AI Coaching
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontSize: "clamp(15px, 2vw, 19px)",
+              color: "#64748b",
+              lineHeight: 1.65,
+              maxWidth: 760,
+              margin: "0 auto 34px"
+            }}
+          >
+            Reverse-engineer the path from your current stack to your dream package. Get week-by-week interactive prep roadmaps, Google X-Y-Z formula resume tailoring, and bar-raiser mock interview simulations.
+          </p>
+
+          {/* Action CTAs */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 38 }}>
+            <Link
+              to="/signup"
+              style={{
+                padding: "14px 32px",
+                background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+                color: "#fff",
+                textDecoration: "none",
+                fontSize: 15.5,
+                fontWeight: 700,
+                borderRadius: 16,
+                boxShadow: "0 10px 24px rgba(124, 58, 237, 0.35)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                transition: "transform 0.15s, box-shadow 0.15s"
+              }}
+            >
+              Build My Career Roadmap
+              <i className="ti ti-arrow-right" style={{ fontSize: 18 }} />
+            </Link>
+
+            <a
+              href="#growth-engine"
+              style={{
+                padding: "14px 26px",
+                background: "#ffffff",
+                color: "#1e1b4b",
+                border: "1.5px solid #e2e8f0",
+                textDecoration: "none",
+                fontSize: 15,
+                fontWeight: 700,
+                borderRadius: 16,
+                display: "flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "12px 24px",
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.04)"
+              }}
+            >
+              <i className="ti ti-chart-dots" style={{ color: "#7c3aed", fontSize: 18 }} />
+              Simulate Growth Curve
+            </a>
+          </div>
+
+          {/* Trust Points */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 24,
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#64748b"
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-check" style={{ color: "#10b981", fontWeight: 900 }} />
+              100% Free Forever Tier
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-check" style={{ color: "#10b981", fontWeight: 900 }} />
+              Google X-Y-Z Resume Standards
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-check" style={{ color: "#10b981", fontWeight: 900 }} />
+              Zero Fluff & Anti-Anchoring
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          3. INTERACTIVE CAREER GROWTH & SALARY TRAJECTORY GRAPH
+      ───────────────────────────────────────────────────────────── */}
+      <section
+        id="growth-engine"
+        ref={growthRef}
+        style={{
+          padding: "30px 20px 70px",
+          maxWidth: 1140,
+          margin: "0 auto",
+          opacity: growthVisible ? 1 : 0,
+          transform: growthVisible ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
+      >
+        <div
+          style={{
+            background: "linear-gradient(180deg, #ffffff 0%, #faf8ff 100%)",
+            borderRadius: 28,
+            border: "1px solid rgba(124, 58, 237, 0.16)",
+            boxShadow: "0 20px 45px rgba(124, 58, 237, 0.08), 0 4px 12px rgba(15, 23, 42, 0.03)",
+            padding: "36px 24px sm:padding 44px 36px",
+            overflow: "hidden"
+          }}
+        >
+          {/* Header of Section */}
+          <div style={{ textAlign: "center", maxWidth: 700, margin: "0 auto 32px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: "#f3eeff",
+                color: "#7c3aed",
+                fontSize: 12,
+                fontWeight: 700,
+                marginBottom: 10
+              }}
+            >
+              <i className="ti ti-trending-up" />
+              Career Acceleration Trajectory Simulator
+            </div>
+            <h2 style={{ fontSize: "clamp(24px, 3.4vw, 36px)", fontWeight: 800, color: "#1a1040", margin: "0 0 10px", letterSpacing: -0.6 }}>
+              See How Your Package Jumps With Precision Coaching
+            </h2>
+            <p style={{ fontSize: 15, color: "#64748b", margin: 0 }}>
+              Select your engineering domain to visualize the technical delta and projected compensation growth.
+            </p>
+          </div>
+
+          {/* Discipline Switcher Tabs */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 34
+            }}
+          >
+            {Object.entries(TRAJECTORY_DATA).map(([key, disc]) => {
+              const active = selectedDiscipline === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedDiscipline(key)}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: 14,
+                    border: active ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
+                    background: active ? "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)" : "#ffffff",
+                    color: active ? "#ffffff" : "#475569",
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    cursor: "pointer",
+                    boxShadow: active ? "0 4px 14px rgba(124, 58, 237, 0.25)" : "none",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {disc.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Visual Graph + Stats Row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 28,
+              alignItems: "center"
+            }}
+          >
+            {/* Left: Interactive SVG Curve Graph */}
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: 22,
+                border: "1px solid #ede9fe",
+                padding: "24px 20px",
+                boxShadow: "0 8px 24px rgba(124, 58, 237, 0.05)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#7c6faa", textTransform: "uppercase" }}>
+                    Growth Curve Projection
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1040" }}>
+                    {activeTrajectory.targetRole}
+                  </div>
+                </div>
+                <span
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 999,
+                    background: "#ecfdf5",
+                    color: "#059669",
+                    fontWeight: 800,
+                    fontSize: 13
+                  }}
+                >
+                  +{activeTrajectory.multiplier} Jump
+                </span>
+              </div>
+
+              {/* Dynamic SVG Area / Line Chart */}
+              <div style={{ position: "relative", width: "100%", height: 180, marginBottom: 12 }}>
+                <svg viewBox="0 0 500 180" style={{ width: "100%", height: "100%", overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="curveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Shaded Area */}
+                  <path
+                    d="M 20,150 Q 140,135 240,95 T 480,25 L 480,170 L 20,170 Z"
+                    fill="url(#curveGradient)"
+                  />
+
+                  {/* Curve Line */}
+                  <path
+                    key={selectedDiscipline}
+                    d="M 20,150 Q 140,135 240,95 T 480,25"
+                    fill="none"
+                    stroke="#7c3aed"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    style={{
+                      strokeDasharray: 700,
+                      strokeDashoffset: 0,
+                      animation: "draw-curve 0.75s ease-out forwards"
+                    }}
+                  />
+
+                  {/* Step Markers along the curve */}
+                  <circle cx="20" cy="150" r="6" fill="#7c3aed" stroke="#fff" strokeWidth="2.5" />
+                  <circle cx="140" cy="135" r="5" fill="#a855f7" stroke="#fff" strokeWidth="2" />
+                  <circle cx="260" cy="90" r="5" fill="#a855f7" stroke="#fff" strokeWidth="2" />
+                  <circle cx="370" cy="55" r="5" fill="#a855f7" stroke="#fff" strokeWidth="2" />
+                  <circle cx="480" cy="25" r="8" fill="#10b981" stroke="#fff" strokeWidth="3" />
+                </svg>
+              </div>
+
+              {/* Graph Timeline Badges */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
+                  gap: 8,
+                  textAlign: "center"
+                }}
+              >
+                {activeTrajectory.graphPoints.map((pt, i) => (
+                  <div key={i} style={{ background: i === 4 ? "#f0fdf4" : "#f8fafc", padding: "8px 6px", borderRadius: 10, border: i === 4 ? "1px solid #bbf7d0" : "1px solid #f1f5f9" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: i === 4 ? "#059669" : "#64748b" }}>{pt.step}</div>
+                    <div style={{ fontSize: 10, color: i === 4 ? "#047857" : "#475569", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {pt.tag}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Compensation & Skills Breakdown */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Compensation Comparison Box */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 14,
+                  background: "#ffffff",
+                  padding: 20,
+                  borderRadius: 18,
+                  border: "1px solid #ede9fe"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Current Benchmark</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#475569", margin: "4px 0" }}>{activeTrajectory.currentPackage}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{activeTrajectory.currentRole}</div>
+                </div>
+
+                <div style={{ borderLeft: "2px solid #ede9fe", paddingLeft: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase" }}>Target Trajectory</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: "#10b981", margin: "4px 0" }}>{activeTrajectory.targetPackage}</div>
+                  <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>In {activeTrajectory.weeks} Sprint</div>
+                </div>
+              </div>
+
+              {/* Skills Delta To Unlock */}
+              <div style={{ background: "#ffffff", padding: 20, borderRadius: 18, border: "1px solid #ede9fe" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", marginBottom: 12 }}>
+                  High-Priority Technical Deltas
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {activeTrajectory.skills.map((skill, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        background: "rgba(124, 58, 237, 0.08)",
+                        color: "#6d28d9",
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        border: "1px solid rgba(124, 58, 237, 0.15)"
+                      }}
+                    >
+                      + {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA inside Simulator */}
+              <Link
+                to="/signup"
+                style={{
+                  padding: "13px 20px",
+                  borderRadius: 14,
+                  background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  boxShadow: "0 6px 16px rgba(30, 27, 75, 0.25)"
+                }}
+              >
+                Generate My Custom Roadmap for {activeTrajectory.label.split(" / ")[0]}
+                <i className="ti ti-sparkles" style={{ color: "#a78bfa" }} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. FOUR CORE PILLARS (BALANCED 2x2 GRID WITH RICH PREVIEWS)
+      ───────────────────────────────────────────────────────────── */}
+      <section
+        id="features"
+        ref={featuresRef}
+        style={{
+          padding: "40px 20px 80px",
+          maxWidth: 1140,
+          margin: "0 auto",
+          opacity: featuresVisible ? 1 : 0,
+          transform: featuresVisible ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 12px",
+              borderRadius: 999,
+              background: "#f3eeff",
+              color: "#7c3aed",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 12
+            }}
+          >
+            Engineering Foundation
+          </div>
+          <h2 style={{ fontSize: "clamp(26px, 3.6vw, 38px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px", letterSpacing: -0.6 }}>
+            Everything You Need to Crack Senior Interviews
+          </h2>
+          <p style={{ fontSize: 16, color: "#64748b", margin: 0, maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
+            Engineered to eliminate candidate rejection points and pass tough bar-raiser rounds at top tech companies.
+          </p>
+        </div>
+
+        {/* Balanced 2x2 Responsive Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 24
+          }}
+        >
+          {/* Card 1: Prep Roadmap */}
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 30,
+              border: "1.5px solid #ede9fe",
+              boxShadow: "0 10px 30px rgba(124, 58, 237, 0.05)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "rgba(124,58,237,0.1)",
+                  color: "#7c3aed",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  marginBottom: 18
+                }}
+              >
+                <i className="ti ti-map-2" />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
+                Personalized Prep Roadmap
+              </h3>
+              <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
+                Calculates the exact technical delta between your current stack and your target role, with structured week-by-week practice drills.
+              </p>
+            </div>
+
+            {/* Mini Visual Preview Widget */}
+            <div
+              style={{
+                background: "#faf8ff",
+                borderRadius: 16,
+                padding: "16px 18px",
+                border: "1px solid #ede9fe"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#1e1b4b" }}>Week 1-2: Concurrency & Locks</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: "#059669" }}>100%</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#1e1b4b" }}>Week 3-4: Distributed Systems</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, color: "#7c3aed" }}>Active</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#cbd5e1" }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Week 5-6: System Design Drills</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "#94a3b8" }}>Upcoming</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Google X-Y-Z Resume Tailoring */}
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 30,
+              border: "1.5px solid #ede9fe",
+              boxShadow: "0 10px 30px rgba(124, 58, 237, 0.05)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "rgba(59,130,246,0.1)",
+                  color: "#3b82f6",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  marginBottom: 18
+                }}
+              >
+                <i className="ti ti-file-text" />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
+                Google X-Y-Z Resume Tailoring
+              </h3>
+              <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
+                Bans passive phrases. Automatically frames your real achievements into high-impact bullet points with diverse metric dimensions.
+              </p>
+            </div>
+
+            {/* Mini Visual Preview Widget */}
+            <div
+              style={{
+                background: "#eff6ff",
+                borderRadius: 16,
+                padding: "16px 18px",
+                border: "1px solid #dbeafe"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#2563eb", textTransform: "uppercase" }}>X-Y-Z Formulation</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#059669" }}>ATS Score: 96/100</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#1e3a8a", lineHeight: 1.5, fontStyle: "italic" }}>
+                "Accomplished <strong>sub-40ms p99 latency</strong> as measured by <strong>Prometheus dashboards</strong>, by migrating monolithic cache to <strong>Redis sliding window log</strong>."
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Target Company Compatibility */}
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 30,
+              border: "1.5px solid #ede9fe",
+              boxShadow: "0 10px 30px rgba(124, 58, 237, 0.05)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "rgba(16,185,129,0.1)",
+                  color: "#10b981",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  marginBottom: 18
+                }}
+              >
+                <i className="ti ti-building" />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
+                Target Company Compatibility
+              </h3>
+              <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
+                Identifies companies actively hiring for your profile, their interview round breakdown, and priority focus topics.
+              </p>
+            </div>
+
+            {/* Mini Visual Preview Widget */}
+            <div
+              style={{
+                background: "#f0fdf4",
+                borderRadius: 16,
+                padding: "16px 18px",
+                border: "1px solid #dcfce7"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#166534" }}>Razorpay / Fintech</span>
+                <span style={{ fontSize: 12, fontWeight: 900, color: "#15803d" }}>94% Match</span>
+              </div>
+              <div style={{ height: 6, background: "#dcfce7", borderRadius: 999, overflow: "hidden", marginBottom: 10 }}>
+                <div style={{ width: "94%", height: "100%", background: "#10b981", borderRadius: 999 }} />
+              </div>
+              <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600 }}>
+                Rounds: Machine Coding (LLD) • Distributed Systems • Culture Fit
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Bar-Raiser Mock Interviews (NO MODEL MENTION) */}
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 30,
+              border: "1.5px solid #ede9fe",
+              boxShadow: "0 10px 30px rgba(124, 58, 237, 0.05)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "rgba(245,158,11,0.1)",
+                  color: "#f59e0b",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  marginBottom: 18
+                }}
+              >
+                <i className="ti ti-messages" />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
+                Bar-Raiser Mock Interviews
+              </h3>
+              <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
+                Simulates tough failure scenarios and concurrency drills with conversational feedback calibrated to top-tier engineering standards.
+              </p>
+            </div>
+
+            {/* Mini Visual Preview Widget */}
+            <div
+              style={{
+                background: "#fffbeb",
+                borderRadius: 16,
+                padding: "16px 18px",
+                border: "1px solid #fef3c7"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <i className="ti ti-shield-check" style={{ color: "#d97706", fontSize: 16 }} />
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#92400e" }}>Rubric Diagnostic</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#b45309" }}>Grade: Strong Hire</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: "#78350f", lineHeight: 1.4 }}>
+                Evaluates edge-case handling, deadlock prevention, and trade-off rationale before you meet the real hiring committee.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          5. LIVE INTERACTIVE ROADMAP TEASER
+      ───────────────────────────────────────────────────────────── */}
+      <section
+        id="roadmap-preview"
+        ref={roadmapRef}
+        style={{
+          padding: "20px 20px 80px",
+          maxWidth: 1100,
+          margin: "0 auto",
+          opacity: roadmapVisible ? 1 : 0,
+          transform: roadmapVisible ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
+      >
+        <div
+          className="card-interactive"
+          style={{
+            background: "#ffffff",
+            borderRadius: 28,
+            border: "1.5px solid #ede9fe",
+            padding: "36px 24px",
+            boxShadow: "0 18px 45px rgba(124, 58, 237, 0.08)"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
+            <div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Interactive Blueprint Preview
+              </span>
+              <h2 style={{ fontSize: "clamp(22px, 3.2vw, 32px)", fontWeight: 800, color: "#1a1040", margin: "6px 0 6px" }}>
+                Target: {sampleRoadmap?.targetRole || "Senior Backend Engineer"}
+              </h2>
+              <div style={{ fontSize: 14.5, color: "#10b981", fontWeight: 700 }}>
+                Target Range: {sampleRoadmap?.targetCompensation || "₹35 - 45 LPA"}
+              </div>
+            </div>
+
+            <Link
+              to="/signup"
+              style={{
+                padding: "11px 22px",
                 background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
                 color: "#fff",
                 textDecoration: "none",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 14,
                 borderRadius: 14,
-                boxShadow: "0 8px 20px rgba(124, 58, 237, 0.25)"
+                boxShadow: "0 6px 18px rgba(124, 58, 237, 0.25)"
               }}
             >
-              Generate My Personal Roadmap in 15 Seconds
-              <i className="ti ti-arrow-right" />
+              Generate Mine Now
             </Link>
           </div>
+
+          {/* Interactive Milestone Modules */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {sampleRoadmap?.milestones?.map((milestone, mIdx) => (
+              <div
+                key={mIdx}
+                style={{
+                  background: "#faf8ff",
+                  borderRadius: 20,
+                  border: "1px solid #ede9fe",
+                  padding: 22
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1040" }}>
+                    Milestone {mIdx + 1}: {milestone.title}
+                  </div>
+                  <span style={{ padding: "4px 10px", borderRadius: 999, background: "#ede9fe", color: "#6d28d9", fontSize: 12, fontWeight: 700 }}>
+                    {milestone.weekSpan}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {milestone.topics.map((topic) => {
+                    const isChecked = !!checkedTopics[topic.id];
+                    return (
+                      <div
+                        key={topic.id}
+                        onClick={() => toggleTopic(topic.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          padding: "12px 14px",
+                          borderRadius: 14,
+                          background: isChecked ? "#ffffff" : "rgba(255,255,255,0.7)",
+                          border: isChecked ? "1px solid #c4b5fd" : "1px solid #f1f5f9",
+                          cursor: "pointer",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            background: isChecked ? "#7c3aed" : "#fff",
+                            border: isChecked ? "none" : "2px solid #cbd5e1",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontSize: 14,
+                            marginTop: 2,
+                            flexShrink: 0
+                          }}
+                        >
+                          {isChecked && <i className="ti ti-check" />}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: isChecked ? "#1a1040" : "#64748b", textDecoration: isChecked ? "none" : "none" }}>
+                            {topic.title}
+                          </div>
+                          <div style={{ fontSize: 12.5, color: "#7c6faa", marginTop: 2 }}>
+                            {topic.keyConcepts}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* 4 Pillars Feature Grid */}
-      <section id="features" style={{ padding: "40px 24px 80px", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, color: "#1a1040", margin: "0 0 10px" }}>
-            Everything You Need to Crack Senior Interviews
-          </h2>
-          <p style={{ fontSize: 16, color: "#64748b", margin: 0 }}>
-            Engineered to eliminate candidate rejection points at top tier tech companies.
-          </p>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-          {/* Pillar 1 */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #e2e8f0" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(124,58,237,0.1)", color: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>
-              <i className="ti ti-map-2" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
-              Personalized Prep Roadmap
-            </h3>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-              Calculates the exact delta between your current stack and your target role, with week-by-week practice drills.
-            </p>
-          </div>
-
-          {/* Pillar 2 */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #e2e8f0" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(59,130,246,0.1)", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>
-              <i className="ti ti-file-text" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
-              Google X-Y-Z Resume Tailoring
-            </h3>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-              Bans passive phrases. Automatically frames your real achievements into high-impact bullet points with diverse metrics.
-            </p>
-          </div>
-
-          {/* Pillar 3 */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #e2e8f0" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(16,185,129,0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>
-              <i className="ti ti-building" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
-              Target Company Compatibility
-            </h3>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-              Identifies companies actively hiring for your profile, their interview round breakdown, and priority focus topics.
-            </p>
-          </div>
-
-          {/* Pillar 4 */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #e2e8f0" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(245,158,11,0.1)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>
-              <i className="ti ti-messages" />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", margin: "0 0 8px" }}>
-              Bar-Raiser Mock Interviews
-            </h3>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-              Simulates tough failure scenarios and concurrency drills with conversational AI feedback powered by Gemini 2.5 Flash.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing / Free Tier Section */}
-      <section id="pricing" style={{ padding: "40px 24px 80px", maxWidth: 840, margin: "0 auto", textAlign: "center" }}>
-        <h2 style={{ fontSize: 32, fontWeight: 800, color: "#1a1040", margin: "0 0 10px" }}>
+      {/* ─────────────────────────────────────────────────────────────
+          6. PRICING & ZERO-COST VALUE GUARANTEE
+      ───────────────────────────────────────────────────────────── */}
+      <section
+        id="pricing"
+        ref={pricingRef}
+        style={{
+          padding: "30px 20px 90px",
+          maxWidth: 880,
+          margin: "0 auto",
+          textAlign: "center",
+          opacity: pricingVisible ? 1 : 0,
+          transform: pricingVisible ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
+      >
+        <h2 style={{ fontSize: "clamp(26px, 3.4vw, 36px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px" }}>
           Built for Developers. Free to Start.
         </h2>
-        <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 36px" }}>
-          No hidden credit card traps. Everything you need to get job-ready today.
+        <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 40px" }}>
+          No credit card traps. Everything you need to get job-ready today.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, textAlign: "left" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 24, textAlign: "left" }}>
           {/* Free Tier */}
-          <div style={{ background: "#fff", borderRadius: 22, padding: 30, border: "1px solid #e2e8f0" }}>
+          <div className="card-interactive" style={{ background: "#ffffff", borderRadius: 24, padding: 32, border: "1.5px solid #e2e8f0" }}>
             <span style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Free Tier</span>
-            <div style={{ fontSize: 34, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>₹0</div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Forever free for every engineer</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14, color: "#334155", marginBottom: 24 }}>
-              <div>✓ Unlimited Personalized Roadmaps</div>
-              <div>✓ Unlimited Quick JD Gap Scans</div>
-              <div>✓ Verified Job Discovery & Tracking</div>
-              <div>✓ 5 AI Resume Tailoring Runs / mo</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>₹0</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Forever free for every engineer</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited Personalized Prep Roadmaps</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Interactive Milestone Tracker</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Verified Job Discovery (Adzuna + JSearch)</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> 5 AI Resume Tailoring Runs / mo</div>
             </div>
             <Link
               to="/signup"
               style={{
                 display: "block",
-                textAlign: "center",
                 padding: "12px",
+                borderRadius: 14,
                 background: "#f1f5f9",
                 color: "#1e293b",
-                borderRadius: 14,
-                textDecoration: "none",
                 fontWeight: 700,
-                fontSize: 14
+                fontSize: 14,
+                textAlign: "center",
+                textDecoration: "none"
               }}
             >
-              Sign Up Free
+              Get Started Free
             </Link>
           </div>
 
           {/* Pro Tier */}
-          <div style={{ background: "linear-gradient(135deg, #2e1065 0%, #1e1b4b 100%)", color: "#fff", borderRadius: 22, padding: 30, boxShadow: "0 15px 35px rgba(124, 58, 237, 0.25)" }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#c084fc", textTransform: "uppercase" }}>Pro Membership</span>
-            <div style={{ fontSize: 34, fontWeight: 900, color: "#fff", margin: "10px 0 4px" }}>₹99 <span style={{ fontSize: 14, fontWeight: 500, color: "#a5b4fc" }}>/ month</span></div>
-            <div style={{ fontSize: 13, color: "#cbd5e1", marginBottom: 20 }}>For active job search sprints</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14, color: "#e2e8f0", marginBottom: 24 }}>
-              <div>✓ Everything in Free</div>
-              <div>✓ Unlimited Google X-Y-Z Resume Tailoring</div>
-              <div>✓ Real-Time Voice/Chat Mock Interview Coach</div>
-              <div>✓ Direct Recruiter Application Export</div>
+          <div
+            className="card-interactive"
+            style={{
+              background: "#ffffff",
+              borderRadius: 24,
+              padding: 32,
+              border: "2px solid #7c3aed",
+              boxShadow: "0 14px 35px rgba(124, 58, 237, 0.15)",
+              position: "relative"
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: -12,
+                right: 24,
+                padding: "4px 12px",
+                background: "#7c3aed",
+                color: "#fff",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: "uppercase"
+              }}
+            >
+              Most Popular
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase" }}>Pro Acceleration</span>
+            <div style={{ fontSize: 36, fontWeight: 900, color: "#1a1040", margin: "10px 0 4px" }}>
+              ₹999 <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>/ 3 months</span>
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Less than a single mock interview session</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14, color: "#334155", marginBottom: 28 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Everything in Free Tier</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited AI Resume Tailoring</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Unlimited Mock Interview Simulations</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><i className="ti ti-check" style={{ color: "#10b981" }} /> Target Company Round-by-Round Rubrics</div>
             </div>
             <Link
               to="/signup"
               style={{
                 display: "block",
-                textAlign: "center",
                 padding: "12px",
-                background: "linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)",
-                color: "#fff",
                 borderRadius: 14,
-                textDecoration: "none",
+                background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+                color: "#fff",
                 fontWeight: 700,
                 fontSize: 14,
-                boxShadow: "0 6px 16px rgba(124, 58, 237, 0.35)"
+                textAlign: "center",
+                textDecoration: "none",
+                boxShadow: "0 6px 16px rgba(124, 58, 237, 0.3)"
               }}
             >
-              Start 7-Day Free Trial
+              Start 3-Month Sprint
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(124, 58, 237, 0.08)", padding: "40px 24px", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <div style={{ fontWeight: 700, color: "#1a1040" }}>
-            CrackIt © 2026. Empowering Engineers to Reach Their Peak Potential.
-          </div>
-          <div style={{ display: "flex", gap: 20 }}>
-            <Link to="/login" style={{ color: "#64748b", textDecoration: "none" }}>Login</Link>
-            <Link to="/signup" style={{ color: "#64748b", textDecoration: "none" }}>Sign Up</Link>
-          </div>
+      {/* ─────────────────────────────────────────────────────────────
+          7. FOOTER
+      ───────────────────────────────────────────────────────────── */}
+      <footer
+        style={{
+          borderTop: "1px solid #f1f5f9",
+          padding: "36px 20px",
+          background: "#ffffff",
+          textAlign: "center",
+          fontSize: 13,
+          color: "#94a3b8"
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <img src="/favicon.png" alt="CrackIt" style={{ width: 22, height: 22, objectFit: "contain" }} />
+          <span style={{ fontWeight: 800, color: "#1e1b4b" }}>Crack<span style={{ color: "#7c3aed" }}>!t</span></span>
+          <span>•</span>
+          <span>Empowering engineers to crack senior technical interviews</span>
+        </div>
+        <div>
+          © {new Date().getFullYear()} CrackIt. All rights reserved. Built for developers worldwide.
         </div>
       </footer>
     </div>

@@ -5,9 +5,9 @@ import { useLocation } from 'react-router-dom'
 
 const mainLinks = [
   { to: '/dashboard', label: 'Home', icon: 'ti-layout-dashboard' },
+  { to: '/roadmap', label: 'Roadmap', icon: 'ti-route' },
   { to: '/jobs', label: 'Jobs', icon: 'ti-briefcase' },
-  { to: '/tracker', label: 'Tracker', icon: 'ti-list-check' },
-  { to: '/discover', label: 'Discover', icon: 'ti-compass' }
+  { to: '/tracker', label: 'Tracker', icon: 'ti-list-check' }
 ]
 
 export default function MobileBottomNav() {
@@ -22,8 +22,8 @@ export default function MobileBottomNav() {
   }
 
   useEffect(() => {
-  setOpen(false)
-}, [location.pathname])
+    setOpen(false)
+  }, [location.pathname])
 
   return (
     <>
@@ -54,7 +54,7 @@ export default function MobileBottomNav() {
             border: '1px solid rgba(124,58,237,0.12)'
           }}
         >
-          <MobileMenuItem icon="ti-map-2" label="Prep Roadmap" onClick={() => go('/roadmap')} />
+          <MobileMenuItem icon="ti-compass" label="Discover Jobs" onClick={() => go('/discover')} />
           <MobileMenuItem icon="ti-target" label="Interviews" onClick={() => go('/interviews')} />
           <MobileMenuItem icon="ti-file-cv" label="Resume" onClick={() => go('/resume')} />
           <MobileMenuItem icon="ti-user-circle" label="Profile" onClick={() => go('/profile')} />
