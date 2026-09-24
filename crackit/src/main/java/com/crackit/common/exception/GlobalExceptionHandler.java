@@ -16,6 +16,23 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<?> handleRateLimitExceededException(RateLimitExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .header("X-RateLimit-Limit", String.valueOf(ex.getLimit()))
+                .header("X-RateLimit-Remaining", "0")
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "RATE_LIMIT_EXCEEDED",
+                        "message", ex.getMessage(),
+                        "limit", ex.getLimit(),
+                        "windowSeconds", ex.getWindowSeconds(),
+                        "retryAfterSeconds", ex.getRetryAfterSeconds()
+                ));
+    }
+
     @ExceptionHandler(QuotaExceededException.class)
     public ResponseEntity<?> handleQuotaExceededException(QuotaExceededException ex) {
 

@@ -5,6 +5,8 @@ import com.crackit.ai.dto.SavedJdAnalysisResponse;
 import com.crackit.ai.dto.SavedTailoredResumeResponse;
 import com.crackit.ai.service.AiIntegrationService;
 import com.crackit.ai.service.ResumeTailoringService;
+import com.crackit.common.ratelimit.annotation.RateLimit;
+import com.crackit.common.ratelimit.enums.RateLimitType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ public class AiController {
     private final AiIntegrationService aiIntegrationService;
     private final ResumeTailoringService resumeTailoringService;
 
+    @RateLimit(key = "ai_job_analyze", limit = 10, durationSeconds = 60, type = RateLimitType.USER_OR_IP)
     @PostMapping("/jobs/{jobId}/analyze")
     public SavedJdAnalysisResponse analyzeJob(@PathVariable String jobId) {
         return aiIntegrationService.analyzeJob(jobId);
@@ -31,6 +34,7 @@ public class AiController {
         return aiIntegrationService.getLatestAnalysisForJob(jobId);
     }
 
+    @RateLimit(key = "ai_tailor_resume", limit = 10, durationSeconds = 60, type = RateLimitType.USER_OR_IP)
     @PostMapping("/jobs/{jobId}/tailor-resume")
     public SavedTailoredResumeResponse tailorResume(@PathVariable String jobId) {
         return resumeTailoringService.tailorResume(jobId);
@@ -50,6 +54,7 @@ public class AiController {
                 .body(pdf);
     }
 
+    @RateLimit(key = "ai_quick_scan", limit = 5, durationSeconds = 60, type = RateLimitType.USER_OR_IP)
     @PostMapping("/quick-scan")
     public JDAnalysisResponse quickScan(@RequestBody Map<String, String> body) {
         String jdText = body.get("jdText");

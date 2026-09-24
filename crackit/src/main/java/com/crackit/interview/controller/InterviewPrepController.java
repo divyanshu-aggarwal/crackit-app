@@ -1,5 +1,7 @@
 package com.crackit.interview.controller;
 
+import com.crackit.common.ratelimit.annotation.RateLimit;
+import com.crackit.common.ratelimit.enums.RateLimitType;
 import com.crackit.interview.dto.*;
 import com.crackit.interview.service.InterviewPrepService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ public class InterviewPrepController {
 
     private final InterviewPrepService interviewPrepService;
 
+    @RateLimit(key = "interview_prep_generate", limit = 10, durationSeconds = 60, type = RateLimitType.USER_OR_IP)
     @PostMapping("/{jobId}/interview-prep")
     public InterviewPrepResponse generatePrep(@PathVariable String jobId) {
         return interviewPrepService.generatePrep(jobId);
@@ -49,10 +52,12 @@ public class InterviewPrepController {
         return interviewPrepService.updateQuestion(questionId, request);
     }
 
+    @RateLimit(key = "interview_chat", limit = 20, durationSeconds = 60, type = RateLimitType.USER_OR_IP)
     @PostMapping("/{jobId}/chat")
     public ChatResponse chat(@PathVariable String jobId, @RequestBody ChatRequest request) {
         return interviewPrepService.chat(jobId, request.getMessage());
     }
+
 
     @GetMapping("/{jobId}/chat/history")
     public List<ChatMessageDto> getChatHistory(@PathVariable String jobId) {
