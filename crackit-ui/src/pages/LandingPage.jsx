@@ -14,11 +14,11 @@ const TRAJECTORY_DATA = {
     weeks: "8 Weeks",
     skills: ["Distributed Locks & Lua", "Kafka Partitioning & EDA", "TiDB / Sharding", "High Concurrency"],
     graphPoints: [
-      { step: "Current", val: 20, tag: "REST APIs / Monolith" },
-      { step: "Week 2", val: 38, tag: "Lock Contention & Redis" },
-      { step: "Week 4", val: 58, tag: "EDA & Idempotency" },
-      { step: "Week 6", val: 78, tag: "Consensus & Raft" },
-      { step: "Target", val: 100, tag: "Staff Offer: ₹42 LPA" }
+      { step: "Current", val: 20, tag: "REST APIs" },
+      { step: "Week 2", val: 38, tag: "Redis Locks" },
+      { step: "Week 4", val: 58, tag: "Kafka EDA" },
+      { step: "Week 6", val: 78, tag: "Raft / TiDB" },
+      { step: "Target", val: 100, tag: "Staff: ₹42L" }
     ]
   },
   frontend: {
@@ -31,11 +31,11 @@ const TRAJECTORY_DATA = {
     weeks: "6 Weeks",
     skills: ["Micro-Frontends & Module Fed", "Core Web Vitals (LCP/INP)", "State Machines & Offline First", "AST & Tooling"],
     graphPoints: [
-      { step: "Current", val: 20, tag: "Component UI / Redux" },
-      { step: "Week 2", val: 42, tag: "CWV & Performance" },
-      { step: "Week 4", val: 65, tag: "State Sync & WebSockets" },
-      { step: "Week 6", val: 82, tag: "Micro-Frontend Engine" },
-      { step: "Target", val: 100, tag: "Lead Offer: ₹36 LPA" }
+      { step: "Current", val: 20, tag: "React / UI" },
+      { step: "Week 2", val: 42, tag: "Core Vitals" },
+      { step: "Week 4", val: 65, tag: "State Sync" },
+      { step: "Week 6", val: 82, tag: "Micro-UI" },
+      { step: "Target", val: 100, tag: "Lead: ₹36L" }
     ]
   },
   fullstack: {
@@ -48,11 +48,11 @@ const TRAJECTORY_DATA = {
     weeks: "8 Weeks",
     skills: ["Fullstack System Design", "Zero-Cost Cloud Topology", "Event Sourcing & CQRS", "AI Workflow Orchestration"],
     graphPoints: [
-      { step: "Current", val: 22, tag: "CRUD & Simple DB" },
-      { step: "Week 2", val: 45, tag: "Distributed Cache & Auth" },
-      { step: "Week 4", val: 68, tag: "Async Queues & Sagas" },
-      { step: "Week 6", val: 84, tag: "Resilience & Security" },
-      { step: "Target", val: 100, tag: "Lead Offer: ₹46 LPA" }
+      { step: "Current", val: 22, tag: "CRUD & DB" },
+      { step: "Week 2", val: 45, tag: "Cache & Auth" },
+      { step: "Week 4", val: 68, tag: "Event Sagas" },
+      { step: "Week 6", val: 84, tag: "System Design" },
+      { step: "Target", val: 100, tag: "Lead: ₹46L" }
     ]
   },
   devops: {
@@ -65,11 +65,11 @@ const TRAJECTORY_DATA = {
     weeks: "8 Weeks",
     skills: ["Kubernetes Operator Patterns", "GitOps & ArgoCD", "Multi-Region Zero-RPO", "Chaos Engineering"],
     graphPoints: [
-      { step: "Current", val: 25, tag: "Docker & Basic CI/CD" },
-      { step: "Week 2", val: 48, tag: "K8s Mesh & Ingress" },
-      { step: "Week 4", val: 70, tag: "Observability & OpenTelemetry" },
-      { step: "Week 6", val: 86, tag: "Multi-Region DR" },
-      { step: "Target", val: 100, tag: "Staff Offer: ₹48 LPA" }
+      { step: "Current", val: 25, tag: "Docker / CI" },
+      { step: "Week 2", val: 48, tag: "K8s Ingress" },
+      { step: "Week 4", val: 70, tag: "OpenTelemetry" },
+      { step: "Week 6", val: 86, tag: "Multi-Region" },
+      { step: "Target", val: 100, tag: "Staff: ₹48L" }
     ]
   }
 };
@@ -663,15 +663,32 @@ export default function LandingPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
-                  gap: 8,
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: 6,
                   textAlign: "center"
                 }}
               >
                 {activeTrajectory.graphPoints.map((pt, i) => (
-                  <div key={i} style={{ background: i === 4 ? "#f0fdf4" : "#f8fafc", padding: "8px 6px", borderRadius: 10, border: i === 4 ? "1px solid #bbf7d0" : "1px solid #f1f5f9" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: i === 4 ? "#059669" : "#64748b" }}>{pt.step}</div>
-                    <div style={{ fontSize: 10, color: i === 4 ? "#047857" : "#475569", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div
+                    key={i}
+                    title={pt.tag}
+                    style={{
+                      background: i === 4 ? "#f0fdf4" : "#f8fafc",
+                      padding: "8px 4px",
+                      borderRadius: 10,
+                      border: i === 4 ? "1.5px solid #86efac" : "1px solid #e2e8f0"
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800, color: i === 4 ? "#059669" : "#64748b" }}>{pt.step}</div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: i === 4 ? "#047857" : "#1e293b",
+                        fontWeight: 700,
+                        lineHeight: 1.25,
+                        marginTop: 2
+                      }}
+                    >
                       {pt.tag}
                     </div>
                   </div>
