@@ -71,6 +71,23 @@ const TRAJECTORY_DATA = {
       { step: "Week 6", val: 86, tag: "Multi-Region" },
       { step: "Target", val: 100, tag: "Staff: ₹48L" }
     ]
+  },
+  sdet: {
+    label: "QA Automation & SDET",
+    currentRole: "QA / Automation Engineer",
+    currentPackage: "₹8 - 11 LPA",
+    targetRole: "Staff SDET / Test Architect",
+    targetPackage: "₹28 - 40 LPA",
+    multiplier: "3.2x",
+    weeks: "6 Weeks",
+    skills: ["Playwright & Cypress Architecture", "Distributed Performance Testing (k6)", "CI/CD Quality Gates", "API & Contract Testing (Pact)"],
+    graphPoints: [
+      { step: "Current", val: 20, tag: "Manual & UI" },
+      { step: "Week 2", val: 42, tag: "E2E Frameworks" },
+      { step: "Week 4", val: 65, tag: "k6 & Load Ops" },
+      { step: "Week 6", val: 84, tag: "CI Quality Gate" },
+      { step: "Target", val: 100, tag: "Staff SDET: ₹36L" }
+    ]
   }
 };
 
@@ -158,6 +175,18 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#fdfcfe", color: "#1a1040", fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      <style>{`
+        .features-grid-2x2 {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+        }
+        @media (max-width: 860px) {
+          .features-grid-2x2 {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       {/* ─────────────────────────────────────────────────────────────
           1. RESPONSIVE NAVIGATION
       ───────────────────────────────────────────────────────────── */}
@@ -805,24 +834,18 @@ export default function LandingPage() {
               marginBottom: 12
             }}
           >
-            Engineering Foundation
+            For Software, QA, DevOps & Tech Leads
           </div>
           <h2 style={{ fontSize: "clamp(26px, 3.6vw, 38px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px", letterSpacing: -0.6 }}>
-            Everything You Need to Crack Senior Interviews
+            Everything You Need to Crack Senior Technical Interviews
           </h2>
           <p style={{ fontSize: 16, color: "#64748b", margin: 0, maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
-            Engineered to eliminate candidate rejection points and pass tough bar-raiser rounds at top tech companies.
+            Engineered to eliminate candidate rejection points and pass tough bar-raiser rounds across Development, QA Automation, DevOps, and Architecture.
           </p>
         </div>
 
         {/* Balanced 2x2 Responsive Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 24
-          }}
-        >
+        <div className="features-grid-2x2">
           {/* Card 1: Prep Roadmap */}
           <div
             className="card-interactive"
@@ -1217,7 +1240,7 @@ export default function LandingPage() {
         }}
       >
         <h2 style={{ fontSize: "clamp(26px, 3.4vw, 36px)", fontWeight: 800, color: "#1a1040", margin: "0 0 12px" }}>
-          Built for Developers. Transparent Pricing.
+          Built for Tech Professionals. Transparent Pricing.
         </h2>
         <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 40px" }}>
           No hidden fees or recurring traps. Start free or accelerate your prep on your terms.
@@ -1403,7 +1426,7 @@ export default function LandingPage() {
           <span>Empowering engineers to crack senior technical interviews</span>
         </div>
         <div>
-          © {new Date().getFullYear()} CrackIt. All rights reserved. Built for developers worldwide.
+          © {new Date().getFullYear()} CrackIt. All rights reserved. Built for Software, QA, DevOps & Tech Professionals worldwide.
         </div>
       </footer>
     </div>
