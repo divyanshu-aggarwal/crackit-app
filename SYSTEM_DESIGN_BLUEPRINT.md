@@ -222,6 +222,86 @@ A common pitfall in generative AI architectures is **Anchor Bias**—where the L
 
 ---
 
+### 4.5 ATS-Compliant Document Compilation & Vector PDF Engine
+A major failure point in consumer resume builders is generating non-ATS-friendly files (multi-column tables, SVG text paths, or rasterized HTML canvas images) that fail parsing in enterprise ATS platforms (Workday, Taleo, Greenhouse).
+
+CrackIt implements an enterprise ATS compilation pipeline:
+```mermaid
+flowchart LR
+    MasterData["Master Resume Data<br/>(User, Skills, Exp, Edu)"] --> Sanitizer["1. Canonical Sorter<br/>Languages -> Backend -> DBs -> Cloud"]
+    Sanitizer --> Bulletizer["2. Accomplishment Formatter<br/>Split into semantic `<li>` points"]
+    Bulletizer --> TemplateEngine["3. Single-Column HTML5 / CSS Template<br/>(Semantic tags: h1, h2, ul, li)"]
+    TemplateEngine --> WeasyPrint["4. WeasyPrint C-Engine<br/>(Pango / Cairo Vector Font Rendering)"]
+    WeasyPrint --> PDFOutput["5. Searchable Vector PDF<br/>(100% Machine-Readable Text)"]
+```
+
+* **Single-Column Constraint**: Enforces a strictly linear text stream preventing horizontal text bleed across columns.
+* **Canonical Skill Precedence**: ATS parsers prioritize hard languages first. CrackIt enforces:
+  $$\text{Languages} \rightarrow \text{Backend} \rightarrow \text{Databases} \rightarrow \text{Caching} \rightarrow \text{Messaging} \rightarrow \text{Cloud/DevOps} \rightarrow \text{Tools} \rightarrow \text{Core Concepts} \rightarrow \text{Other}$$
+* **Implementation Reference**: [`resume_pdf_service.py`](file:///home/stpl/Crackit/crackit-ai-service/app/services/resume_pdf_service.py).
+
+---
+
+### 4.6 Multi-Tier Fault-Tolerant Ingestion Pipeline
+When candidates upload resumes (ranging from clean Word exports to multi-column Canva graphics and scanned photos), a single parsing strategy fails. CrackIt implements a 3-tier cascade:
+
+```mermaid
+flowchart TD
+    Upload["Uploaded PDF File"] --> PyMuPDF["Tier 1: PyMuPDF (fitz) Stream<br/>Fast Unicode extraction (< 50ms)"]
+    PyMuPDF --> Check{"Text Length > 30 chars?"}
+    Check -->|"Yes (Digital PDF)"| LLMPrompt["Gemini 2.5 Flash Text Prompt<br/>(Strict JSON Mode)"]
+    Check -->|"No (Scanned/Rasterized)"| VisionPrompt["Tier 2: Gemini Multimodal Vision<br/>(Pass raw PDF byte Part directly)"]
+    
+    LLMPrompt --> Validate{"LLM Call Succeeded?"}
+    VisionPrompt --> Validate
+    
+    Validate -->|"Yes"| Sanitizer["Pydantic v2 Fault-Tolerant Sanitizer<br/>(Handle missing keys, string arrays, dicts)"]
+    Validate -->|"No (Rate-Limit / 503 / Timeout)"| LocalFallback["Tier 3: Local Heuristic Regex Parser<br/>(Extracts contact, skills, summary locally)"]
+    
+    Sanitizer --> DBCommit["Atomic JPA Commit to TiDB"]
+    LocalFallback --> DBCommit
+```
+
+* **Zero 500 Errors**: Even if Google Gemini is down or rate-limited, the local heuristic fallback parses the document, ensuring users never see a raw error page.
+* **Implementation Reference**: [`resume_parse_service.py`](file:///home/stpl/Crackit/crackit-ai-service/app/services/resume_parse_service.py).
+
+---
+
+### 4.7 16-Step Progressive Roadmap Synthesis & Feasibility Engine
+High-level generic roadmaps ("Learn Java, then System Design") lack actionable engineering depth. CrackIt generates a **16-step progressive curriculum** structured across 4 sequential phases:
+1. **Phase 1: Foundations & Core Mechanics** (Steps 1–4)
+2. **Phase 2: Framework Internals & Data Layer Mastery** (Steps 5–8)
+3. **Phase 3: High-Scale Distributed Systems & Messaging** (Steps 9–12)
+4. **Phase 4: Production Resilience & System Design** (Steps 13–16)
+
+```mermaid
+flowchart LR
+    CandidateGoal["Target: Senior Backend Engineer<br/>Target: 3x Current CTC in 2 Weeks"] --> FeasibilityEngine["Feasibility & Reality Engine<br/>Ratio = Target CTC / Current CTC"]
+    
+    FeasibilityEngine --> Decision{"Jump >= 2.5x AND<br/>Timeline <= 4 Weeks?"}
+    Decision -->|"Yes (Impractical)"| Warning["Flag: Impractical Target<br/>Suggest Stepping-Stone Role & 16-week timeline"]
+    Decision -->|"No (Achievable)"| Approved["Flag: Achievable Target"]
+    
+    Warning --> Generator["Synthesize 16 Topics with Drills, Pitfalls & Talking Points"]
+    Approved --> Generator
+    Generator --> DualPersistence["Dual Persistence:<br/>1. Client localStorage Hydration<br/>2. Backend /api/roadmap/save TiDB Commit"]
+```
+
+* **Refresh Resilience**: Client instantly hydrates from `localStorage` (`crackit:active_roadmap`) to eliminate blank screens, synchronized with backend PostgreSQL/MySQL via `@PostMapping("/api/roadmap/save")`.
+* **Implementation Reference**: [`RoadmapService.java`](file:///home/stpl/Crackit/crackit/src/main/java/com/crackit/roadmap/service/RoadmapService.java) & [`RoadmapPage.jsx`](file:///home/stpl/Crackit/crackit-ui/src/pages/RoadmapPage.jsx).
+
+---
+
+### 4.8 Idempotent Self-Healing Database Migration for Cloud Databases
+Distributed serverless databases (e.g. TiDB Cloud) decouple compute and storage. Standard ORM schema auto-updaters (Hibernate `ddl-auto: update`) often fail to alter existing tables due to metadata caching differences, causing runtime `SQL Error 1054: Unknown column in field list`.
+
+CrackIt implements an autonomous bootstrap migrator:
+- Implemented as [`DatabaseSchemaMigrator.java`](file:///home/stpl/Crackit/crackit/src/main/java/com/crackit/common/config/DatabaseSchemaMigrator.java).
+- Runs during `@PostConstruct` and `ApplicationRunner` before incoming HTTP connections are accepted.
+- Inspects `information_schema.COLUMNS` and executes idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for all schema revisions (`education`, career fields, compensation preferences).
+
+---
+
 ## 5. Zero-Cost Architectural Engineering (\$0 / Month Footprint)
 
 Enterprise software architectures usually require massive infrastructure bills. CrackIt was deliberately engineered to maintain **enterprise-grade guarantees on a pure \$0/month free-tier topology**:
@@ -361,6 +441,41 @@ flowchart LR
 
 ---
 
+### Question 11: "Why choose WeasyPrint over HTML Canvas (e.g. jsPDF / html2canvas) or iText for ATS resume generation?"
+> **Model Answer**:
+> "Client-side HTML canvas tools (like `html2canvas`) render the DOM as a rasterized image before wrapping it in a PDF wrapper. While visually identical, an ATS parser sees an image with zero extractable text, scoring it 0%.
+> Pure programmatic PDF libraries like iText or Apache PDFBox require manual coordinate calculation (`x, y` point math), making responsive single-page styling brittle and maintenance-heavy.
+> WeasyPrint compiles semantic HTML5 and CSS3 directly into searchable vector PDF text using native Cairo and Pango C-libraries. It maintains exact typographic control (`pt` units, page break rules, border dividers) while producing a 100% machine-readable Unicode text stream with zero rasterization."
+
+---
+
+### Question 12: "How do you handle schema variations and unexpected data formats from LLM document extraction in production?"
+> **Model Answer**:
+> "We implement defensive parsing across three tiers:
+> 1. Pydantic v2 Models with Default Values: All parsed models (e.g., `ParsedExperience`, `ParsedProject`) assign safe defaults (`""` or `[]`) to every attribute. If an LLM response omits a field or returns null, Pydantic never raises a fatal `ValidationError`.
+> 2. Dynamic Type Sanitization: Before constructing domain objects, our service sanitizes polymorphic structures (e.g., converting a list of raw strings `['bullet 1', 'bullet 2']` into structured objects `{'bulletText': '...', 'technologies': ''}`, or wrapping single education objects into lists).
+> 3. Local Heuristic Fallback: If the LLM throws 429 rate limit or 503 overload errors, the service falls back to local PyMuPDF regex extraction rather than returning an HTTP 500 error to the client."
+
+---
+
+### Question 13: "How does the Career Roadmap engine enforce realistic sequence and prevent hallucinated advice?"
+> **Model Answer**:
+> "We separate pedagogical progression from arbitrary topic selection:
+> 1. Strict 4-Phase Sequential Hierarchy: The curriculum strictly follows Foundations (Steps 1–4) $\rightarrow$ Deep Internals (Steps 5–8) $\rightarrow$ Distributed Systems (Steps 9–12) $\rightarrow$ Production Reliability (Steps 13–16). High-level jargon without actionable engineering mechanisms is rejected.
+> 2. Feasibility & Reality Check Algorithm: The engine calculates the compensation jump ratio:
+>    $$\text{Ratio} = \frac{\text{Target CTC}}{\text{Current CTC}}$$
+>    If a candidate requests a $\ge 2.5\times$ salary jump within $\le 4\text{ weeks}$, the system flags the goal as impractical, recommends an achievable 16-week timeline, and suggests stepping-stone positions.
+> 3. Bi-Directional Hydration: Client `localStorage` caching eliminates network blank flickers while background synchronization (`/api/roadmap/save`) guarantees cross-device persistence."
+
+---
+
+### Question 14: "Why does standard ORM schema auto-update fail in distributed cloud databases like TiDB, and how did you resolve it?"
+> **Model Answer**:
+> "In distributed SQL engines like TiDB, compute nodes (TiDB servers) and storage nodes (TiKV) are decoupled, and metadata schemas are cached across multi-node instances using Google F1 asynchronous schema change protocols. Hibernate's `ddl-auto: update` queries `DatabaseMetaData`, often fails to detect missing columns on existing tables due to metadata catalog differences, and skips issuing `ALTER TABLE` statements. At runtime, Hibernate's generated queries throw `SQL Error 1054: Unknown column in field list`.
+> We solved this by implementing `DatabaseSchemaMigrator.java` running on `@PostConstruct` before incoming HTTP traffic is accepted. It connects directly via JDBC, queries `information_schema.COLUMNS` with database-level isolation, and executes idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` statements."
+
+---
+
 ## 7. System Design Trade-Off Matrix
 
 | Dimension | Option Chosen | Alternative Considered | Primary Trade-Off Rationale |
@@ -369,6 +484,7 @@ flowchart LR
 | **Database** | TiDB Serverless (Distributed HTAP) | Traditional MySQL / PostgreSQL | TiDB offers zero-downtime horizontal scaling, multi-region Raft consensus, and free-tier serverless pricing with MySQL wire compatibility. |
 | **Rate Limiting** | Redis Sliding Window Log | Token Bucket in memory (Bucket4j) | In-memory token buckets don't sync across multi-instance deployments; Redis sliding window log provides strict cross-instance sliding accuracy. |
 | **AI Output Mode** | Strict Pydantic JSON Schema | Free-form Markdown Parsing | Markdown parsing is brittle and prone to delimiter truncation; JSON mode guarantees type safety and reliable deserialization. |
+| **PDF Generation** | WeasyPrint (HTML/CSS to Vector PDF) | Client-side html2canvas or iText/PDFBox | Canvas produces non-ATS raster images; iText requires tedious coordinate math; WeasyPrint generates 100% searchable vector text from semantic HTML. |
 | **Event Broker** | Apache Kafka | RabbitMQ / AWS SQS | Kafka provides durable, replayable log semantics with consumer group partitioning, enabling independent replay of analytics events. |
 
 ---
@@ -380,4 +496,8 @@ flowchart LR
 * [x] **Financial Webhook Idempotency**: Verified HMAC-SHA256 signature verification and DB state deduplication.
 * [x] **Anti-Anchoring AI Guidance**: Google X-Y-Z formula and multi-metric diversity prompt architecture.
 * [x] **Fault-Tolerant Cache-Aside**: Dynamic TTL jitter and negative caching for high throughput.
+* [x] **ATS Vector PDF Generation**: WeasyPrint headless engine with single-column layout and canonical skill hierarchy.
+* [x] **Multi-Tier Fault-Tolerant Parsing**: PyMuPDF stream $\rightarrow$ Gemini multimodal $\rightarrow$ local heuristic fallback.
+* [x] **16-Step Progressive Roadmap**: Sequential engineering phases with feasibility checks against impossible targets.
+* [x] **Self-Healing Schema Migrations**: Startup JDBC migrator eliminating `1054 Unknown column` errors in distributed databases.
 * [x] **Production Grade Testing**: 100% passing unit tests across payment, rate limiter, and roadmap domains.

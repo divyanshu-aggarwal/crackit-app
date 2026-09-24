@@ -89,3 +89,25 @@ flowchart TD
 - `POST /api/roadmap/generate` is protected by our distributed rate limiter:
   `@RateLimit(key = "roadmap_generate", limit = 5, durationSeconds = 60, type = RateLimitType.USER)`
 - Unauthenticated preview route `/api/roadmap/sample` is publicly whitelisted in `SecurityConfig.java` to power the interactive Landing Page preview without consuming database quotas.
+
+---
+
+## 6. The 16-Step Progressive Syllabus & Reality Feasibility Engine
+
+### 1. Pedagogical Phasing (16 Concrete Steps)
+To avoid high-level jargon and provide a real, comprehensive week-by-week syllabus, the engine structures learning into 4 progressive phases:
+- **Phase 1: Engineering Fundamentals & Memory Models** (Steps 1–4: Concurrency, Collections, Memory/GC, Classloaders)
+- **Phase 2: Framework Internals & Data Layer Mastery** (Steps 5–8: Spring AOP/Proxying, HikariCP, JPA N+1 / Dirty Checking, B+Tree Indexing)
+- **Phase 3: High-Scale Distributed Systems & Messaging** (Steps 9–12: Kafka Partitioning, Redis Lua Rate Limiting, Distributed Transactions / Saga, Event Sourcing)
+- **Phase 4: Reliability, Observability & Senior Architecture** (Steps 13–16: Resilient Circuit Breakers, OpenTelemetry Tracing, Capacity Planning, 90-Minute Machine Coding)
+
+### 2. Reality & Feasibility Guardrails
+When candidates set unrealistic transition goals, the engine intercepts the request:
+$$\text{Compensation Multiplier} = \frac{\text{Target CTC}}{\text{Current CTC}}$$
+- If $\text{Multiplier} \ge 2.5\times$ and $\text{Timeline} \le 4\text{ weeks}$, the system flags the goal as **Impractical**.
+- It provides constructive feedback: suggesting an extended 12–16 week timeline or stepping-stone positions (e.g. SDE-1 $\rightarrow$ SDE-2 before Staff).
+
+### 3. Dual Persistence & Anti-Flicker Hydration
+- Instant client-side hydration via `localStorage` (`crackit:active_roadmap`) prevents blank-screen latency.
+- Synchronized persistence via `POST /api/roadmap/save` to TiDB Cloud preserves state across devices.
+
