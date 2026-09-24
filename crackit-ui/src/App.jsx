@@ -11,7 +11,8 @@ import ResumePage from "./pages/ResumePage";
 import ProfilePage from "./pages/ProfilePage";
 import InterviewPrepPage from "./pages/InterviewPrepPage";
 import DiscoverPage from "./pages/DiscoverPage";
-import MyInterviewsPage from "./pages/MyInterviewsPage";
+import RoadmapPage from "./pages/RoadmapPage";
+import LandingPage from "./pages/LandingPage";
 import { ToastProvider } from './components/ui/ToastProvider'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import NotFoundPage from './pages/NotFoundPage'
@@ -22,6 +23,11 @@ function PrivateRoute({ children }) {
     return token ? children : <Navigate to="/login" />
 }
 
+function HomeRoute() {
+    const { token } = useAuth()
+    return token ? <Navigate to="/dashboard" /> : <LandingPage />
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -29,12 +35,15 @@ export default function App() {
         <ToastProvider>
           <BrowserRouter>
             <Routes>
+              {/* Public Root Route: Landing Page for guests, Dashboard redirect for logged-in users */}
+              <Route path="/" element={<HomeRoute />} />
+
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-                <Route index element={<Navigate to="/dashboard" />} />
+              <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="roadmap" element={<RoadmapPage />} />
                 <Route path="jobs" element={<Jobs />} />
                 <Route path="jobs/:jobId" element={<JobDetail />} />
                 <Route path="tracker" element={<Tracker />} />

@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [showScan, setShowScan] = useState(false)
   const [resumeStrength, setResumeStrength] = useState(null)
   const [recommendedJobs, setRecommendedJobs] = useState([])
+  const [currentRoadmap, setCurrentRoadmap] = useState(null)
   const [animateBars, setAnimateBars] = useState(false)
   const navigate = useNavigate()
 
@@ -40,6 +41,16 @@ const isMobile = screenWidth < 768
     api.get('/api/tracker/dashboard')
       .then(res => setDashboard(res.data))
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    api.get('/api/roadmap/current')
+      .then(res => {
+        if (res.status === 200 && res.data) {
+          setCurrentRoadmap(res.data)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -251,7 +262,122 @@ const isMobile = screenWidth < 768
         {showScan && <QuickScanModal onClose={() => setShowScan(false)} />}
       </div>
 
+      {/* Active Roadmap Banner or Cold-Start Launchpad */}
+      {currentRoadmap ? (
+        <Card style={{ padding: '18px 22px', borderRadius: 20, marginBottom: 20, background: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)', border: '1px solid rgba(124, 58, 237, 0.18)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(124, 58, 237, 0.12)', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                <i className="ti ti-map-2" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: '#1a1040' }}>
+                    Active Prep Roadmap: {currentRoadmap.targetRole}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: 999 }}>
+                    {currentRoadmap.targetCompensation || 'Top of Market'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: '#7c6faa', marginTop: 3 }}>
+                  Readiness Score: <b style={{ color: '#7c3aed' }}>{currentRoadmap.overallScore}%</b> • Prep Completion: <b>{currentRoadmap.overallProgress}%</b>
+                </div>
+              </div>
+            </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 130, display: isMobile ? 'none' : 'block' }}>
+                <div style={{ height: 8, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${currentRoadmap.overallProgress}%`, background: 'linear-gradient(90deg, #8b5cf6, #7c3aed)', borderRadius: 999, transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/roadmap')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 18px',
+                  borderRadius: 14,
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 14px rgba(124, 58, 237, 0.2)'
+                }}
+              >
+                Open Roadmap →
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : apps.length === 0 ? (
+        <Card style={{ padding: '24px 22px', borderRadius: 20, marginBottom: 20, background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: '#7c3aed', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                <i className="ti ti-rocket" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1a1040', margin: 0 }}>
+                  Welcome to Your Career Launchpad 🚀
+                </h3>
+                <p style={{ fontSize: 13, color: '#7c6faa', margin: 0 }}>
+                  Take 3 quick steps to accelerate your path to your target tech role.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/roadmap')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 18px',
+                borderRadius: 14,
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                color: '#fff',
+                border: 'none',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 6px 14px rgba(124, 58, 237, 0.25)'
+              }}
+            >
+              Start Guided Onboarding
+              <i className="ti ti-arrow-right" />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div onClick={() => navigate('/roadmap')} style={{ padding: 14, borderRadius: 14, background: '#fff', border: '1px solid rgba(124, 58, 237, 0.12)', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1040' }}>Build Prep Roadmap</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>Diagnose exact skill gaps for your dream package.</div>
+            </div>
+
+            <div onClick={() => navigate('/resume')} style={{ padding: 14, borderRadius: 14, background: '#fff', border: '1px solid rgba(124, 58, 237, 0.12)', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1040' }}>Tailor Resume (X-Y-Z)</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>Generate high-impact ATS bullet points.</div>
+            </div>
+
+            <div onClick={() => navigate('/discover')} style={{ padding: 14, borderRadius: 14, background: '#fff', border: '1px solid rgba(124, 58, 237, 0.12)', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#a855f7', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1040' }}>Match Compatible Jobs</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>Explore verified jobs matching your roadmap.</div>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <div style={{
   display: 'grid',
@@ -307,46 +433,65 @@ const isMobile = screenWidth < 768
               </span>
             </div>
 
-            {apps.slice(0, 4).map(app => (
-              <div key={app.id} onClick={() => navigate(`/jobs/${app.jobId}`)} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                padding: '12px 0',
-                borderBottom: '0.5px solid #f0eeff',
-                cursor: 'pointer'
-              }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#1a1040',
-                    lineHeight: 1,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {app.jobTitle}
-                  </div>
-
-                  <div style={{
-                    fontSize: 13,
-                    color: '#7c6faa',
-                    marginTop: 2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {app.companyName}
-                  </div>
+            {apps.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 12px' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(124,58,237,0.08)', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: 20 }}>
+                  <i className="ti ti-briefcase" />
                 </div>
-
-                <StatusBadge status={app.status} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1040', marginBottom: 4 }}>
+                  No tracked applications yet
+                </div>
+                <div style={{ fontSize: 12, color: '#7c6faa', marginBottom: 14 }}>
+                  Discover verified roles tailored to your target roadmap!
+                </div>
+                <button onClick={() => navigate('/discover')} style={{ ...primaryActionBtn, margin: '0 auto', fontSize: 13, padding: '8px 16px' }}>
+                  <i className="ti ti-compass" />
+                  Discover Jobs
+                </button>
               </div>
-            ))}
+            ) : (
+              apps.slice(0, 4).map(app => (
+                <div key={app.id} onClick={() => navigate(`/jobs/${app.jobId}`)} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                  padding: '12px 0',
+                  borderBottom: '0.5px solid #f0eeff',
+                  cursor: 'pointer'
+                }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: '#1a1040',
+                      lineHeight: 1,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {app.jobTitle}
+                    </div>
+
+                    <div style={{
+                      fontSize: 13,
+                      color: '#7c6faa',
+                      marginTop: 2,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {app.companyName}
+                    </div>
+                  </div>
+
+                  <StatusBadge status={app.status} />
+                </div>
+              ))
+            )}
           </Card>
+
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

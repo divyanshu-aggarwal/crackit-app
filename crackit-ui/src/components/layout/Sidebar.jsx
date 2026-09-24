@@ -5,10 +5,12 @@ import ProBadge from '../ui/ProBadge'
 
 const links = [
   { to: '/dashboard', label: 'Dashboard', icon: 'ti-layout-dashboard' },
+  { to: '/roadmap', label: 'Prep Roadmap', icon: 'ti-map-2' },
   { to: '/jobs', label: 'My Jobs', icon: 'ti-briefcase' },
   { to: '/tracker', label: 'Tracker', icon: 'ti-list-check' },
   { to: '/discover', label: 'Discover', icon: 'ti-compass' },
 ]
+
 
 function SidebarLink({
   to,

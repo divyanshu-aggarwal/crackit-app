@@ -72,4 +72,14 @@ public class AiServiceClient {
                 aiServiceBaseUrl + "/interview-chat", HttpMethod.POST, entity, Map.class);
         return response.getBody();
     }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateRoadmap(Map<String, Object> payload) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        ResponseEntity<Map> response = restTemplate.exchange(
+                aiServiceBaseUrl + "/generate-roadmap", HttpMethod.POST, entity, Map.class);
+        return response.getBody();
+    }
 }

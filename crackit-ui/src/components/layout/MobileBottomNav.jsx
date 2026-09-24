@@ -54,6 +54,7 @@ export default function MobileBottomNav() {
             border: '1px solid rgba(124,58,237,0.12)'
           }}
         >
+          <MobileMenuItem icon="ti-map-2" label="Prep Roadmap" onClick={() => go('/roadmap')} />
           <MobileMenuItem icon="ti-target" label="Interviews" onClick={() => go('/interviews')} />
           <MobileMenuItem icon="ti-file-cv" label="Resume" onClick={() => go('/resume')} />
           <MobileMenuItem icon="ti-user-circle" label="Profile" onClick={() => go('/profile')} />
