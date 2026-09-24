@@ -87,10 +87,10 @@ geodb:
 
 razorpay:
   key:
-    id: ${RAZORPAY_KEY_ID:rzp_test_TfRBglAQrKcl2q}
-    secret: ${RAZORPAY_KEY_SECRET:nXhuR16yp4sWfjFdcgNCBhVP}
+    id: ${RAZORPAY_KEY_ID:}
+    secret: ${RAZORPAY_KEY_SECRET:}
   webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:crackit_local_webhook_secret}
-  mock-mode: ${RAZORPAY_MOCK_MODE:false}
+  mock-mode: ${RAZORPAY_MOCK_MODE:true}
 
 keepalive:
   enabled: ${KEEPALIVE_ENABLED:true}
