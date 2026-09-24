@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,16 +101,40 @@ public class ResumeService {
 
             // clear existing and repopulate skills
             skillRepository.deleteAllByUserId(user.getId());
-            List<Map<String, Object>> skills = (List<Map<String, Object>>) parsed.getOrDefault("skills", List.of());
-            for (Map<String, Object> s : skills) {
-                skillRepository.save(Skill.builder()
-                        .id(UUID.randomUUID().toString())
-                        .user(user)
-                        .skillName((String) s.getOrDefault("skillName", ""))
-                        .category((String) s.getOrDefault("category", ""))
-                        .proficiencyLevel((String) s.getOrDefault("proficiencyLevel", ""))
-                        .yearsUsed(s.get("yearsUsed") instanceof Integer i ? i : 0)
-                        .build());
+            List<?> skills = (List<?>) parsed.getOrDefault("skills", List.of());
+            if (skills != null) {
+                for (Object sObj : skills) {
+                    String sName = "";
+                    String sCat = "Other";
+                    String sProf = "Advanced";
+                    int sYears = 0;
+                    if (sObj instanceof Map<?, ?> sm) {
+                        Object nVal = sm.get("skillName") != null ? sm.get("skillName") : sm.get("name");
+                        sName = nVal != null ? String.valueOf(nVal) : "";
+                        Object cVal = sm.get("category");
+                        sCat = cVal != null ? String.valueOf(cVal) : "Other";
+                        Object pVal = sm.get("proficiencyLevel");
+                        sProf = pVal != null ? String.valueOf(pVal) : "Advanced";
+                        Object y = sm.get("yearsUsed");
+                        if (y instanceof Number num) {
+                            sYears = num.intValue();
+                        } else if (y instanceof String str) {
+                            try { sYears = Integer.parseInt(str.replaceAll("[^0-9]", "")); } catch (Exception ignored) {}
+                        }
+                    } else if (sObj instanceof String str && !str.isBlank()) {
+                        sName = str.trim();
+                    }
+                    if (!sName.isBlank() && !"null".equalsIgnoreCase(sName)) {
+                        skillRepository.save(Skill.builder()
+                                .id(UUID.randomUUID().toString())
+                                .user(user)
+                                .skillName(sName)
+                                .category(sCat != null && !"null".equalsIgnoreCase(sCat) ? sCat : "Other")
+                                .proficiencyLevel(sProf != null && !"null".equalsIgnoreCase(sProf) ? sProf : "Advanced")
+                                .yearsUsed(sYears)
+                                .build());
+                    }
+                }
             }
 
             // clear existing and repopulate experiences + bullets
@@ -119,43 +144,100 @@ public class ResumeService {
             }
             experienceRepository.deleteAllByUserId(user.getId());
 
-            List<Map<String, Object>> experiences = (List<Map<String, Object>>) parsed.getOrDefault("experiences", List.of());
-            for (Map<String, Object> e : experiences) {
-                Experience exp = experienceRepository.save(Experience.builder()
-                        .id(UUID.randomUUID().toString())
-                        .user(user)
-                        .companyName((String) e.getOrDefault("companyName", ""))
-                        .role((String) e.getOrDefault("role", ""))
-                        .startDate(parseDate((String) e.get("startDate")))
-                        .endDate(parseDate((String) e.get("endDate")))
-                        .currentCompany(Boolean.TRUE.equals(e.get("currentCompany")))
-                        .description((String) e.getOrDefault("description", ""))
-                        .build());
+            List<?> experiences = (List<?>) parsed.getOrDefault("experiences", List.of());
+            if (experiences != null) {
+                for (Object eObj : experiences) {
+                    if (eObj instanceof Map<?, ?> e) {
+                        Object compVal = e.get("companyName") != null ? e.get("companyName") : e.get("company");
+                        String comp = compVal != null ? String.valueOf(compVal) : "Experience";
+                        Object roleVal = e.get("role") != null ? e.get("role") : e.get("title");
+                        String role = roleVal != null ? String.valueOf(roleVal) : "Software Engineer";
+                        Object descVal = e.get("description");
+                        String desc = descVal != null ? String.valueOf(descVal) : "";
 
-                List<Map<String, Object>> bullets = (List<Map<String, Object>>) e.getOrDefault("bullets", List.of());
-                for (Map<String, Object> b : bullets) {
-                    experienceBulletRepository.save(ExperienceBullet.builder()
-                            .id(UUID.randomUUID().toString())
-                            .experience(exp)
-                            .bulletText((String) b.getOrDefault("bulletText", ""))
-                            .technologies((String) b.getOrDefault("technologies", ""))
-                            .build());
+                        Experience exp = experienceRepository.save(Experience.builder()
+                                .id(UUID.randomUUID().toString())
+                                .user(user)
+                                .companyName(comp != null && !"null".equalsIgnoreCase(comp) ? comp : "Experience")
+                                .role(role != null && !"null".equalsIgnoreCase(role) ? role : "Software Engineer")
+                                .startDate(parseDate((String) e.get("startDate")))
+                                .endDate(parseDate((String) e.get("endDate")))
+                                .currentCompany(Boolean.TRUE.equals(e.get("currentCompany")))
+                                .description(desc != null && !"null".equalsIgnoreCase(desc) ? desc : "")
+                                .build());
+
+                        Object bulletsObj = e.get("bullets");
+                        if (bulletsObj instanceof List<?> bullets) {
+                            for (Object bObj : bullets) {
+                                String bText = "";
+                                String bTech = "";
+                                if (bObj instanceof Map<?, ?> bMap) {
+                                    Object bt = bMap.get("bulletText") != null ? bMap.get("bulletText") : bMap.get("text");
+                                    bText = bt != null ? String.valueOf(bt) : "";
+                                    Object tc = bMap.get("technologies");
+                                    bTech = tc != null ? String.valueOf(tc) : "";
+                                } else if (bObj instanceof String str) {
+                                    bText = str;
+                                }
+                                if (bText != null && !bText.isBlank() && !"null".equalsIgnoreCase(bText)) {
+                                    experienceBulletRepository.save(ExperienceBullet.builder()
+                                            .id(UUID.randomUUID().toString())
+                                            .experience(exp)
+                                            .bulletText(bText)
+                                            .technologies(bTech != null && !"null".equalsIgnoreCase(bTech) ? bTech : "")
+                                            .build());
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             // clear existing and repopulate projects
             projectRepository.deleteAllByUserId(user.getId());
-            List<Map<String, Object>> projects = (List<Map<String, Object>>) parsed.getOrDefault("projects", List.of());
-            for (Map<String, Object> p : projects) {
-                projectRepository.save(Project.builder()
-                        .id(UUID.randomUUID().toString())
-                        .user(user)
-                        .title((String) p.getOrDefault("title", ""))
-                        .description((String) p.getOrDefault("description", ""))
-                        .techStack((String) p.getOrDefault("techStack", ""))
-                        .githubUrl((String) p.getOrDefault("githubUrl", ""))
-                        .impactMetrics((String) p.getOrDefault("impactMetrics", ""))
-                        .build());
+            List<?> projects = (List<?>) parsed.getOrDefault("projects", List.of());
+            if (projects != null) {
+                for (Object pObj : projects) {
+                    if (pObj instanceof Map<?, ?> p) {
+                        Object tVal = p.get("title") != null ? p.get("title") : p.get("name");
+                        String title = tVal != null ? String.valueOf(tVal) : "";
+                        Object dVal = p.get("description");
+                        String desc = dVal != null ? String.valueOf(dVal) : "";
+                        Object tsVal = p.get("techStack");
+                        String tech = tsVal != null ? String.valueOf(tsVal) : "";
+                        Object ghVal = p.get("githubUrl");
+                        String gh = ghVal != null ? String.valueOf(ghVal) : "";
+                        Object imVal = p.get("impactMetrics");
+                        String impact = imVal != null ? String.valueOf(imVal) : "";
+
+                        if ((desc.isBlank() || "null".equalsIgnoreCase(desc)) && p.get("bullets") instanceof List<?> projBullets) {
+                            List<String> bTexts = new ArrayList<>();
+                            for (Object pb : projBullets) {
+                                if (pb instanceof Map<?, ?> pbMap) {
+                                    Object bt = pbMap.get("bulletText") != null ? pbMap.get("bulletText") : pbMap.get("text");
+                                    if (bt != null && !String.valueOf(bt).isBlank() && !"null".equalsIgnoreCase(String.valueOf(bt))) {
+                                        bTexts.add("• " + String.valueOf(bt));
+                                    }
+                                } else if (pb instanceof String pbs && !pbs.isBlank()) {
+                                    bTexts.add("• " + pbs);
+                                }
+                            }
+                            desc = String.join("\n", bTexts);
+                        }
+
+                        if (!title.isBlank() && !"null".equalsIgnoreCase(title)) {
+                            projectRepository.save(Project.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .user(user)
+                                    .title(title)
+                                    .description(desc != null && !"null".equalsIgnoreCase(desc) ? desc : "")
+                                    .techStack(tech != null && !"null".equalsIgnoreCase(tech) ? tech : "")
+                                    .githubUrl(gh != null && !"null".equalsIgnoreCase(gh) ? gh : "")
+                                    .impactMetrics(impact != null && !"null".equalsIgnoreCase(impact) ? impact : "")
+                                    .build());
+                        }
+                    }
+                }
             }
 
             return getFullResume();
@@ -173,13 +255,14 @@ public class ResumeService {
 
         MasterResume masterResume = masterResumeRepository.findByUserId(user.getId())
                 .stream().findFirst()
-                .orElseThrow(() -> new RuntimeException("No master resume found"));
+                .orElse(null);
 
+        String summary = masterResume != null && masterResume.getSummary() != null ? masterResume.getSummary() : "";
         List<Skill> skills = skillRepository.findByUserId(user.getId());
         List<Experience> experiences = experienceRepository.findByUserId(user.getId());
         List<Project> projects = projectRepository.findByUserId(user.getId());
 
-        Map<String, Object> payload = buildPdfPayload(user, masterResume.getSummary(), skills, experiences, projects, photoBase64);
+        Map<String, Object> payload = buildPdfPayload(user, summary, skills, experiences, projects, photoBase64);
         return aiServiceClient.generateResumePdf(payload);
     }
 

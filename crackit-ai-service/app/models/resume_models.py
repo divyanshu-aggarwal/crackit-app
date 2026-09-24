@@ -1,74 +1,74 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 # ── Tailoring models (existing) ──────────────────────────
 class BulletPoint(BaseModel):
-    bulletText: str
-    technologies: str
+    bulletText: str = ""
+    technologies: str = ""
 
 
 class TailoredExperience(BaseModel):
-    companyName: str
-    role: str
-    bullets: List[BulletPoint]
+    companyName: str = ""
+    role: str = ""
+    bullets: List[BulletPoint] = []
 
 
 class TailoredProject(BaseModel):
-    title: str
-    description: str
-    techStack: str
+    title: str = ""
+    description: str = ""
+    techStack: str = ""
     impactMetrics: str = ""
     bullets: List[BulletPoint] = []
 
 
 class ResumeTailoringRequest(BaseModel):
     jdAnalysis: dict
-    summary: str
-    skills: List[dict]
-    experiences: List[dict]
-    projects: List[dict]
+    summary: str = ""
+    skills: List[dict] = []
+    experiences: List[dict] = []
+    projects: List[dict] = []
 
 
 class ResumeTailoringResponse(BaseModel):
-    tailoredSummary: str
-    tailoredSkills: List[str]
-    tailoredExperiences: List[TailoredExperience]
-    tailoredProjects: List[TailoredProject]
-    atsKeywordsUsed: List[str]
-    matchScore: int
+    tailoredSummary: str = ""
+    tailoredSkills: List[str] = []
+    tailoredExperiences: List[TailoredExperience] = []
+    tailoredProjects: List[TailoredProject] = []
+    atsKeywordsUsed: List[str] = []
+    matchScore: int = 0
 
 
 # ── Resume parsing models ─────────────────────────────────
 class ParsedBullet(BaseModel):
-    bulletText: str
+    bulletText: str = ""
     technologies: str = ""
 
 
 class ParsedExperience(BaseModel):
-    companyName: str
-    role: str
+    companyName: str = ""
+    role: str = ""
     startDate: Optional[str] = None
     endDate: Optional[str] = None
     currentCompany: bool = False
     description: str = ""
-    bullets: List[ParsedBullet] = []
+    bullets: List[Any] = []
 
 
 class ParsedSkill(BaseModel):
-    skillName: str
+    skillName: str = ""
     category: str = ""
     proficiencyLevel: str = ""
     yearsUsed: int = 0
 
 
 class ParsedProject(BaseModel):
-    title: str
+    title: str = ""
     description: str = ""
     techStack: str = ""
     githubUrl: str = ""
     impactMetrics: str = ""
-    bullets: List[ParsedBullet] = []
+    bullets: List[Any] = []
 
 
 class ParsedEducation(BaseModel):
@@ -88,8 +88,8 @@ class ParsedResume(BaseModel):
 
 # ── PDF generation models ─────────────────────────────────
 class ResumePdfRequest(BaseModel):
-    fullName: str
-    email: str
+    fullName: str = "guest"
+    email: str = ""
     phone: str = ""
     location: str = ""
     linkedinUrl: str = ""
@@ -98,5 +98,5 @@ class ResumePdfRequest(BaseModel):
     skills: List[dict] = []
     experiences: List[dict] = []
     projects: List[dict] = []
-    education: Optional[object] = None
+    education: Optional[Any] = None
     photoBase64: Optional[str] = None

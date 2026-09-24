@@ -1116,9 +1116,30 @@ export default function ResumePage() {
         a.download = "master_resume.pdf";
         a.click();
         URL.revokeObjectURL(url);
+        window.dispatchEvent(
+          new CustomEvent('crackit:toast', {
+            detail: { type: 'success', message: '📄 Resume PDF downloaded successfully!' }
+          })
+        );
+      } else {
+        const err = await res.json().catch(() => ({}));
+        const msg = err.message || "Failed to download PDF resume. Please try again.";
+        window.dispatchEvent(
+          new CustomEvent('crackit:toast', {
+            detail: { type: 'error', message: msg }
+          })
+        );
       }
-    } catch (e) { console.error(e); }
-    setDownloading(false);
+    } catch (e) {
+      console.error("Resume download error:", e);
+      window.dispatchEvent(
+        new CustomEvent('crackit:toast', {
+          detail: { type: 'error', message: "Failed to download resume. Please check your network connection." }
+        })
+      );
+    } finally {
+      setDownloading(false);
+    }
   };
 
 const saveSummary = async (summaryText) => {
