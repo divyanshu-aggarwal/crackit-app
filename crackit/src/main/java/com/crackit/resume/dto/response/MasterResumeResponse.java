@@ -11,5 +11,7 @@ public class MasterResumeResponse {
 
     private String summary;
 
+    private String education;
+
     private String rawResumeText;
 }

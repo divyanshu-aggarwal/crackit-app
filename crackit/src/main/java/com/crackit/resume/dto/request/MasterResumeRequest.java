@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class MasterResumeRequest {
     private String summary;
+    private String education;
     private String rawResumeText;
 }

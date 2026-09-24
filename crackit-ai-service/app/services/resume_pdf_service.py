@@ -1,8 +1,34 @@
 from datetime import datetime
+import re
 from weasyprint import HTML
 
 
 class ResumePdfService:
+
+    ATS_CATEGORY_PRIORITY = {
+        "language": 1,
+        "backend": 2,
+        "framework": 2,
+        "database": 3,
+        "sql": 3,
+        "caching": 4,
+        "reliability": 4,
+        "messaging": 5,
+        "distributed": 5,
+        "stream": 5,
+        "kafka": 5,
+        "cloud": 6,
+        "devops": 6,
+        "aws": 6,
+        "docker": 6,
+        "tool": 7,
+        "testing": 7,
+        "test": 7,
+        "git": 7,
+        "concept": 8,
+        "architecture": 8,
+        "design": 8,
+    }
 
     def generate_pdf(self, data: dict, template: str = "classic") -> bytes:
         if template == "modern":
@@ -31,36 +57,68 @@ class ResumePdfService:
         if d.get("githubUrl"):   parts.append(f'<a href="{d["githubUrl"]}">GitHub</a>')
         return parts
 
-    def _skills_by_category(self, skills: list) -> dict:
+    def _category_priority(self, cat: str) -> int:
+        c = (cat or "").lower().strip()
+        for key, prio in self.ATS_CATEGORY_PRIORITY.items():
+            if key in c:
+                return prio
+        if not c or c == "other":
+            return 99
+        return 20
+
+    def _skills_by_category(self, skills: list) -> list:
+        """
+        Groups skills by category and returns sorted tuples of (category_name, [skills])
+        strictly according to ATS precedence: Languages -> Backend -> Databases -> Caching -> Messaging -> Cloud -> Tools -> Concepts
+        """
         grouped: dict[str, list] = {}
         for s in skills:
-            cat = s.get("category") or "Other"
-            grouped.setdefault(cat, []).append(s.get("skillName", ""))
-        return grouped
+            if isinstance(s, dict):
+                cat = (s.get("category") or "").strip() or "Other"
+                name = (s.get("skillName") or "").strip()
+            else:
+                cat = "Other"
+                name = str(s).strip()
+            if name:
+                grouped.setdefault(cat, []).append(name)
 
-    def _exp_html(self, experiences: list, bullet_style: str = "disc") -> str:
+        # Sort categories based on ATS priority
+        sorted_cats = sorted(grouped.keys(), key=lambda c: (self._category_priority(c), c.lower()))
+        return [(cat, grouped[cat]) for cat in sorted_cats if grouped[cat]]
+
+    def _exp_html(self, experiences: list) -> str:
         html = ""
         for exp in experiences:
             start = self._fmt_date(exp.get("startDate", ""))
             end = "Present" if exp.get("currentCompany") or exp.get("current") else self._fmt_date(exp.get("endDate", ""))
             date_range = f"{start} – {end}" if start else ""
             location = exp.get("location", "")
+            role = exp.get("role", exp.get("jobTitle", ""))
+            company = exp.get("companyName", exp.get("company", ""))
+            sub_parts = [company]
+            if location:
+                sub_parts.append(location)
+            sub_text = " · ".join(filter(None, sub_parts))
 
             bullets_html = ""
             for b in exp.get("bullets", []):
                 text = b.get("bulletText", "") if isinstance(b, dict) else str(b)
-                if text:
-                    bullets_html += f"<li>{text}</li>"
+                if text and text.strip():
+                    bullets_html += f"<li>{text.strip()}</li>"
+
+            # Fallback if bullets was empty but description was provided
+            if not bullets_html and exp.get("description"):
+                desc_lines = [l.strip().lstrip("•-* ").strip() for l in exp["description"].replace("\r", "").split("\n") if l.strip()]
+                for l in desc_lines:
+                    bullets_html += f"<li>{l}</li>"
 
             html += f"""
             <div class="entry">
                 <div class="entry-header">
-                    <div class="entry-left">
-                        <span class="entry-title">{exp.get("role", exp.get("jobTitle", ""))}</span>
-                        <span class="entry-sub">{exp.get("companyName", exp.get("company", ""))}{" · " + location if location else ""}</span>
-                    </div>
+                    <span class="entry-title">{role}</span>
                     <span class="entry-date">{date_range}</span>
                 </div>
+                {f'<div class="entry-sub">{sub_text}</div>' if sub_text else ''}
                 {"<ul>" + bullets_html + "</ul>" if bullets_html else ""}
             </div>
             """
@@ -73,29 +131,75 @@ class ResumePdfService:
             tech = p.get("techStack", "")
             desc = p.get("description", "")
             impact = p.get("impactMetrics", "")
+
             bullets_html = ""
-            for b in p.get("bullets", []):
-                text = b.get("bulletText", "") if isinstance(b, dict) else str(b)
-                if text:
-                    bullets_html += f"<li>{text}</li>"
+            # 1. Use explicit bullets if present
+            raw_bullets = p.get("bullets", [])
+            if raw_bullets:
+                for b in raw_bullets:
+                    text = b.get("bulletText", "") if isinstance(b, dict) else str(b)
+                    if text and text.strip():
+                        bullets_html += f"<li>{text.strip()}</li>"
+
+            # 2. If no bullets, intelligently convert project description into bullets
+            if not bullets_html and desc:
+                raw_lines = [l.strip().lstrip("•-* ").strip() for l in desc.replace("\r", "").split("\n") if l.strip()]
+                if len(raw_lines) == 1:
+                    sentences = [s.strip().lstrip("•-* ").strip() for s in re.split(r'(?<=[.!?])\s+', raw_lines[0]) if len(s.strip()) > 15]
+                    raw_lines = sentences if len(sentences) > 1 else raw_lines
+                for l in raw_lines:
+                    bullets_html += f"<li>{l}</li>"
+
+            # 3. Add impact metrics if specified and not already in bullets
+            if impact and not any(impact.lower() in str(b).lower() for b in raw_bullets):
+                bullets_html += f"<li><strong>Key Impact:</strong> {impact}</li>"
 
             html += f"""
             <div class="entry">
                 <div class="entry-header">
-                    <div class="entry-left">
-                        <span class="entry-title">{name}</span>
-                        {"<span class='entry-tech'>" + tech + "</span>" if tech else ""}
-                    </div>
+                    <span class="entry-title">{name}</span>
                 </div>
-                {"<p class='entry-desc'>" + desc + "</p>" if desc else ""}
+                {f'<div class="entry-tech">{tech}</div>' if tech else ''}
                 {"<ul>" + bullets_html + "</ul>" if bullets_html else ""}
-                {"<p class='entry-impact'>" + impact + "</p>" if impact else ""}
             </div>
             """
         return html
 
-    # ─── Template 1: Classic ─────────────────────────────────────────────────
-    # Clean single-column, ATS-safe, matches your original resume style
+    def _edu_html(self, education) -> str:
+        if not education:
+            return ""
+        html = ""
+        items = education if isinstance(education, list) else [education]
+        for edu in items:
+            if isinstance(edu, dict):
+                degree = edu.get("degree", edu.get("course", ""))
+                institution = edu.get("institution", edu.get("college", edu.get("university", "")))
+                year = edu.get("year", edu.get("dates", edu.get("endDate", "")))
+                score = edu.get("score", edu.get("gpa", edu.get("percentage", "")))
+
+                sub_parts = [institution]
+                if score:
+                    sub_parts.append(str(score))
+                sub_text = " · ".join(filter(None, sub_parts))
+
+                html += f"""
+                <div class="entry">
+                    <div class="entry-header">
+                        <span class="entry-title">{degree}</span>
+                        <span class="entry-date">{year}</span>
+                    </div>
+                    {f'<div class="entry-sub">{sub_text}</div>' if sub_text else ''}
+                </div>
+                """
+            elif isinstance(edu, str) and edu.strip():
+                html += f"""
+                <div class="entry">
+                    <div class="entry-desc">{edu.strip()}</div>
+                </div>
+                """
+        return html
+
+    # ─── Template 1: Classic (Clean, True ATS-Friendly Single-Column) ─────────
 
     def _build_classic(self, d: dict) -> str:
         full_name   = d.get("fullName", "")
@@ -103,26 +207,23 @@ class ResumePdfService:
         skills      = d.get("skills", [])
         experiences = d.get("experiences", [])
         projects    = d.get("projects", [])
+        education   = d.get("education") or d.get("educations") or d.get("educationList")
 
         contact_parts = self._contact_parts(d)
         contact_html  = " · ".join(contact_parts)
 
-        # Skills grouped by category
-        grouped = self._skills_by_category(skills)
+        # Sorted Skills grouped strictly by ATS precedence
+        sorted_skill_tuples = self._skills_by_category(skills)
         skills_html = ""
-        for cat, names in grouped.items():
-            if cat and cat.lower() != "other":
-                skills_html += f'<div class="skill-row"><span class="skill-cat">{cat}:</span> {", ".join(names)}</div>'
-        # dump "Other" or uncategorised at end
-        other = grouped.get("Other", []) + grouped.get("", [])
-        if other:
-            skills_html += f'<div class="skill-row"><span class="skill-cat">Other:</span> {", ".join(other)}</div>'
+        for cat, names in sorted_skill_tuples:
+            skills_html += f'<div class="skill-row"><span class="skill-cat">{cat}:</span> <span class="skill-val">{", ".join(names)}</span></div>'
 
         exp_html  = self._exp_html(experiences)
         proj_html = self._proj_html(projects)
+        edu_html  = self._edu_html(education)
 
         def section(title, body):
-            if not body.strip():
+            if not body or not body.strip():
                 return ""
             return f"""
             <div class="section">
@@ -135,53 +236,131 @@ class ResumePdfService:
 <head>
 <meta charset="UTF-8">
 <style>
+  @page {{
+    size: A4;
+    margin: 28pt 36pt;
+  }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10pt;
-    color: #1a1a1a;
-    line-height: 1.5;
-    padding: 32pt 44pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #111827;
+    line-height: 1.45;
   }}
 
   /* Header */
-  .header {{ margin-bottom: 14pt; border-bottom: 1.5pt solid #1a1040; padding-bottom: 10pt; }}
-  .name {{ font-size: 20pt; font-weight: 700; color: #1a1040; letter-spacing: -0.3pt; margin-bottom: 5pt; }}
-  .contact {{ font-size: 9pt; color: #444; }}
-  .contact a {{ color: #5b21b6; text-decoration: none; }}
+  .header {{
+    margin-bottom: 12pt;
+    padding-bottom: 8pt;
+  }}
+  .name {{
+    font-size: 20pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.4pt;
+    margin-bottom: 4pt;
+  }}
+  .contact {{
+    font-size: 9pt;
+    color: #475569;
+  }}
+  .contact a {{
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 600;
+  }}
 
   /* Sections */
-  .section {{ margin-bottom: 13pt; }}
+  .section {{
+    margin-bottom: 11pt;
+  }}
   .section-title {{
-    font-size: 8.5pt; font-weight: 700; color: #1a1040;
-    text-transform: uppercase; letter-spacing: 1pt;
-    border-bottom: 0.75pt solid #ccc;
-    padding-bottom: 2pt; margin-bottom: 7pt;
+    font-size: 9pt;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.8pt;
+    border-bottom: 1pt solid #0f172a;
+    padding-bottom: 2pt;
+    margin-bottom: 6pt;
   }}
 
   /* Summary */
-  .summary-text {{ font-size: 9.5pt; color: #333; line-height: 1.6; }}
+  .summary-text {{
+    font-size: 9pt;
+    color: #334155;
+    line-height: 1.5;
+    text-align: justify;
+  }}
 
   /* Skills */
-  .skill-row {{ font-size: 9.5pt; color: #333; margin-bottom: 3pt; }}
-  .skill-cat {{ font-weight: 700; color: #1a1040; }}
+  .skill-row {{
+    font-size: 9pt;
+    color: #334155;
+    margin-bottom: 2.5pt;
+    line-height: 1.4;
+  }}
+  .skill-cat {{
+    font-weight: 700;
+    color: #0f172a;
+  }}
+  .skill-val {{
+    color: #334155;
+  }}
 
   /* Entries */
-  .entry {{ margin-bottom: 10pt; }}
-  .entry-header {{
-    display: flex; justify-content: space-between;
-    align-items: flex-start; margin-bottom: 2pt;
+  .entry {{
+    margin-bottom: 8.5pt;
+    page-break-inside: avoid;
   }}
-  .entry-left {{ display: flex; flex-direction: column; }}
-  .entry-title {{ font-size: 10pt; font-weight: 700; color: #1a1040; }}
-  .entry-sub {{ font-size: 9pt; color: #555; margin-top: 1pt; }}
-  .entry-tech {{ font-size: 9pt; color: #5b21b6; margin-top: 1pt; }}
-  .entry-date {{ font-size: 9pt; color: #666; white-space: nowrap; margin-left: 10pt; flex-shrink: 0; }}
-  .entry-desc {{ font-size: 9.5pt; color: #333; margin-top: 3pt; line-height: 1.5; }}
-  .entry-impact {{ font-size: 9pt; color: #666; font-style: italic; margin-top: 2pt; }}
+  .entry-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1pt;
+  }}
+  .entry-title {{
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #0f172a;
+  }}
+  .entry-date {{
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+    text-align: right;
+  }}
+  .entry-sub {{
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 2pt;
+  }}
+  .entry-tech {{
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #475569;
+    margin-bottom: 2.5pt;
+  }}
+  .entry-desc {{
+    font-size: 9pt;
+    color: #334155;
+    line-height: 1.45;
+  }}
 
-  ul {{ margin-top: 4pt; margin-left: 16pt; }}
-  ul li {{ font-size: 9.5pt; color: #333; margin-bottom: 2pt; line-height: 1.5; }}
+  ul {{
+    margin-top: 2pt;
+    margin-left: 15pt;
+    list-style-type: disc;
+  }}
+  ul li {{
+    font-size: 9pt;
+    color: #1e293b;
+    margin-bottom: 2.5pt;
+    line-height: 1.45;
+    text-align: justify;
+  }}
 </style>
 </head>
 <body>
@@ -195,12 +374,12 @@ class ResumePdfService:
 {section("Skills", skills_html)}
 {section("Experience", exp_html)}
 {section("Projects", proj_html)}
+{section("Education", edu_html)}
 
 </body>
 </html>"""
 
-    # ─── Template 2: Modern ──────────────────────────────────────────────────
-    # Purple left accent, name in large bold, slightly more visual
+    # ─── Template 2: Modern (Sleek Purple Accent, Still 100% ATS-Compliant) ─
 
     def _build_modern(self, d: dict) -> str:
         full_name   = d.get("fullName", "")
@@ -208,28 +387,26 @@ class ResumePdfService:
         skills      = d.get("skills", [])
         experiences = d.get("experiences", [])
         projects    = d.get("projects", [])
+        education   = d.get("education") or d.get("educations") or d.get("educationList")
 
         contact_parts = self._contact_parts(d)
-        contact_html  = "  <span class='dot'>·</span>  ".join(contact_parts)
+        contact_html  = " · ".join(contact_parts)
 
-        grouped = self._skills_by_category(skills)
+        sorted_skill_tuples = self._skills_by_category(skills)
         skills_html = ""
-        for cat, names in grouped.items():
-            label = cat if cat and cat.lower() != "other" else "Other"
-            skills_html += f'<div class="skill-row"><span class="skill-cat">{label}</span><span class="skill-names">{", ".join(names)}</span></div>'
+        for cat, names in sorted_skill_tuples:
+            skills_html += f'<div class="skill-row"><span class="skill-cat">{cat}:</span> <span class="skill-val">{", ".join(names)}</span></div>'
 
         exp_html  = self._exp_html(experiences)
         proj_html = self._proj_html(projects)
+        edu_html  = self._edu_html(education)
 
         def section(title, body):
-            if not body.strip():
+            if not body or not body.strip():
                 return ""
             return f"""
             <div class="section">
-                <div class="section-header">
-                    <div class="section-bar"></div>
-                    <div class="section-title">{title}</div>
-                </div>
+                <div class="section-title">{title}</div>
                 {body}
             </div>"""
 
@@ -238,74 +415,135 @@ class ResumePdfService:
 <head>
 <meta charset="UTF-8">
 <style>
+  @page {{
+    size: A4;
+    margin: 28pt 36pt;
+  }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10pt;
-    color: #1a1a1a;
-    line-height: 1.5;
-    padding: 36pt 44pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #111827;
+    line-height: 1.45;
   }}
 
   /* Header */
   .header {{
-    margin-bottom: 18pt;
-    padding-bottom: 14pt;
-    border-bottom: 2pt solid #7c3aed;
+    margin-bottom: 14pt;
+    padding-bottom: 8pt;
+    border-bottom: 2pt solid #6d28d9;
   }}
   .name {{
-    font-size: 24pt; font-weight: 700;
-    color: #1a1040; letter-spacing: -0.5pt; margin-bottom: 6pt;
+    font-size: 22pt;
+    font-weight: 800;
+    color: #1e1b4b;
+    letter-spacing: -0.4pt;
+    margin-bottom: 4pt;
   }}
-  .name span {{ color: #7c3aed; }}
-  .contact {{ font-size: 9pt; color: #555; }}
-  .contact a {{ color: #7c3aed; text-decoration: none; }}
-  .dot {{ color: #c4b5fd; }}
+  .contact {{
+    font-size: 9pt;
+    color: #475569;
+  }}
+  .contact a {{
+    color: #6d28d9;
+    text-decoration: none;
+    font-weight: 600;
+  }}
 
   /* Sections */
-  .section {{ margin-bottom: 15pt; }}
-  .section-header {{ display: flex; align-items: center; gap: 8pt; margin-bottom: 8pt; }}
-  .section-bar {{ width: 3pt; height: 14pt; background: #7c3aed; border-radius: 2pt; flex-shrink: 0; }}
+  .section {{
+    margin-bottom: 12pt;
+  }}
   .section-title {{
-    font-size: 9pt; font-weight: 700; color: #1a1040;
-    text-transform: uppercase; letter-spacing: 1pt;
+    font-size: 9pt;
+    font-weight: 800;
+    color: #4c1d95;
+    text-transform: uppercase;
+    letter-spacing: 0.8pt;
+    border-bottom: 1pt solid #ddd6fe;
+    padding-bottom: 2pt;
+    margin-bottom: 6pt;
   }}
 
   /* Summary */
-  .summary-text {{ font-size: 9.5pt; color: #444; line-height: 1.65; }}
+  .summary-text {{
+    font-size: 9pt;
+    color: #334155;
+    line-height: 1.5;
+    text-align: justify;
+  }}
 
   /* Skills */
   .skill-row {{
-    display: flex; gap: 8pt;
-    font-size: 9.5pt; margin-bottom: 4pt;
-    padding: 3pt 6pt; background: #faf8ff;
-    border-left: 2pt solid #e4daff; border-radius: 0 4pt 4pt 0;
+    font-size: 9pt;
+    color: #334155;
+    margin-bottom: 2.5pt;
+    line-height: 1.4;
   }}
-  .skill-cat {{ font-weight: 700; color: #5b21b6; min-width: 90pt; flex-shrink: 0; }}
-  .skill-names {{ color: #333; }}
+  .skill-cat {{
+    font-weight: 700;
+    color: #4c1d95;
+  }}
+  .skill-val {{
+    color: #334155;
+  }}
 
   /* Entries */
-  .entry {{ margin-bottom: 10pt; }}
+  .entry {{
+    margin-bottom: 8.5pt;
+    page-break-inside: avoid;
+  }}
   .entry-header {{
-    display: flex; justify-content: space-between;
-    align-items: flex-start; margin-bottom: 2pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1pt;
   }}
-  .entry-left {{ display: flex; flex-direction: column; }}
-  .entry-title {{ font-size: 10.5pt; font-weight: 700; color: #1a1040; }}
-  .entry-sub {{ font-size: 9pt; color: #7c3aed; margin-top: 1pt; font-weight: 500; }}
-  .entry-tech {{ font-size: 9pt; color: #7c3aed; margin-top: 1pt; }}
+  .entry-title {{
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #1e1b4b;
+  }}
   .entry-date {{
-    font-size: 8.5pt; color: #fff; white-space: nowrap;
-    margin-left: 10pt; flex-shrink: 0;
-    background: #7c3aed; padding: 2pt 7pt;
-    border-radius: 10pt;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #6d28d9;
+    white-space: nowrap;
+    text-align: right;
   }}
-  .entry-desc {{ font-size: 9.5pt; color: #333; margin-top: 3pt; line-height: 1.5; }}
-  .entry-impact {{ font-size: 9pt; color: #666; font-style: italic; margin-top: 2pt; }}
+  .entry-sub {{
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 2pt;
+  }}
+  .entry-tech {{
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #6d28d9;
+    margin-bottom: 2.5pt;
+  }}
+  .entry-desc {{
+    font-size: 9pt;
+    color: #334155;
+    line-height: 1.45;
+  }}
 
-  ul {{ margin-top: 4pt; margin-left: 14pt; }}
-  ul li {{ font-size: 9.5pt; color: #444; margin-bottom: 2pt; line-height: 1.5; }}
-  ul li::marker {{ color: #a78bfa; }}
+  ul {{
+    margin-top: 2pt;
+    margin-left: 15pt;
+    list-style-type: disc;
+  }}
+  ul li {{
+    font-size: 9pt;
+    color: #1e293b;
+    margin-bottom: 2.5pt;
+    line-height: 1.45;
+    text-align: justify;
+  }}
+  ul li::marker {{
+    color: #6d28d9;
+  }}
 </style>
 </head>
 <body>
@@ -319,6 +557,7 @@ class ResumePdfService:
 {section("Skills", skills_html)}
 {section("Experience", exp_html)}
 {section("Projects", proj_html)}
+{section("Education", edu_html)}
 
 </body>
 </html>"""

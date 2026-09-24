@@ -49,7 +49,21 @@ Return this exact structure:
       "description": "",
       "techStack": "",
       "githubUrl": "",
-      "impactMetrics": ""
+      "impactMetrics": "",
+      "bullets": [
+        {{
+          "bulletText": "",
+          "technologies": ""
+        }}
+      ]
+    }}
+  ],
+  "education": [
+    {{
+      "degree": "",
+      "institution": "",
+      "year": "",
+      "score": ""
     }}
   ]
 }}

@@ -43,21 +43,27 @@ Your goal is to build a high-precision, authoritative, non-generic Career Prepar
    - The roadmap MUST include revision topics that upgrade their existing skills to hiring bar standards.
    - Mark each topic with "isRevision": true for existing stack deepening, and "isRevision": false for net-new architecture gaps.
 
-3. CONCRETE WEEK-BY-WEEK CADENCE:
-   - Divide the {target_timeline_weeks} weeks into 4 structured milestone phases.
-   - Each milestone must have 3 to 4 in-depth topics.
-   - Each topic must include:
-     - Clear, non-generic title.
-     - "isRevision": boolean.
-     - "keyConcepts": specific algorithms, protocols, internals, patterns.
-     - "practiceTask": concrete hands-on project or coding drill to build.
-     - "estimatedHours": integer.
-     - "interviewQuestions": exactly 2 to 3 REAL interview questions asked by top firms, with a concise model answer hint.
-     - "readingResource": high-value documentation or canonical reference.
+3. CONCRETE STEP-BY-STEP PROGRESSIVE CADENCE (MANDATORY 12-16 DETAILED TOPICS):
+   - You MUST generate exactly 4 progressive milestone phases.
+   - Each milestone MUST have 3 to 4 concrete, granular, in-depth topics (Total of 12 to 16 topics across the entire roadmap).
+   - Topics MUST be ordered in strict progressive difficulty:
+     * Phase 1 (Weeks 1-2): Core Language Mechanics, Memory Model, Concurrency & Thread Safety, and Bar-Raiser Revision of Candidate's Known Stack ({skills_str}).
+     * Phase 2 (Weeks 3-4): Object-Oriented Domain Modeling, Low-Level Design (LLD), Design Patterns, and Timed Machine Coding Drills.
+     * Phase 3 (Weeks 5-6): Database Internals, Query Execution Plans, B+Tree Indexing, Transaction Isolation Levels (MVCC), and Redis Caching Strategies.
+     * Phase 4 (Weeks 7-8): Event-Driven Architecture (Kafka), High-Level System Design (HLD), Sharding, Distributed Transactions (Saga), and Bar-Raiser Interview Defense.
+   - For every topic, provide:
+     - "id": unique string e.g. "m1-t1", "m1-t2", ...
+     - "title": precise, non-generic technical topic name (e.g. "Thread Safety, CAS & Atomic Variables" NOT "Learn Concurrency").
+     - "isRevision": true if revising/elevating their known stack, false if net-new gap.
+     - "keyConcepts": specific internals, data structures, protocols, failure modes.
+     - "practiceTask": concrete coding drill, mini-project, or benchmark to implement.
+     - "estimatedHours": realistic integer (6-16 hours).
+     - "interviewQuestions": exactly 2 to 3 real top-tier interview questions with concrete architecture answer hints.
+     - "readingResource": canonical engineering paper, blog post, or official doc chapter.
 
-4. NO GENERIC FLUFF:
-   - FORBIDDEN: "Learn Spring Boot basics", "Read a book on system design", "Practice DSA".
-   - REQUIRED: Production-grade architectural challenges, concurrency hazards, distributed failure modes.
+4. NO HIGH-LEVEL JARGON OR GENERIC HAND-WAVING:
+   - STRICTLY FORBIDDEN: "Learn basics", "Study system design", "Practice DSA", "Read articles", "Prepare for interviews".
+   - MANDATORY: Concrete engineering depth, algorithmic guarantees, edge cases, trade-offs, and failure recovery.
 
 ---
 

@@ -18,7 +18,8 @@ class TailoredProject(BaseModel):
     title: str
     description: str
     techStack: str
-    impactMetrics: str
+    impactMetrics: str = ""
+    bullets: List[BulletPoint] = []
 
 
 class ResumeTailoringRequest(BaseModel):
@@ -67,6 +68,14 @@ class ParsedProject(BaseModel):
     techStack: str = ""
     githubUrl: str = ""
     impactMetrics: str = ""
+    bullets: List[ParsedBullet] = []
+
+
+class ParsedEducation(BaseModel):
+    degree: str = ""
+    institution: str = ""
+    year: str = ""
+    score: str = ""
 
 
 class ParsedResume(BaseModel):
@@ -74,6 +83,7 @@ class ParsedResume(BaseModel):
     skills: List[ParsedSkill] = []
     experiences: List[ParsedExperience] = []
     projects: List[ParsedProject] = []
+    education: List[ParsedEducation] = []
 
 
 # ── PDF generation models ─────────────────────────────────
@@ -88,4 +98,5 @@ class ResumePdfRequest(BaseModel):
     skills: List[dict] = []
     experiences: List[dict] = []
     projects: List[dict] = []
+    education: Optional[object] = None
     photoBase64: Optional[str] = None

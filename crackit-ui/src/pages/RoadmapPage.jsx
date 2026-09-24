@@ -53,11 +53,19 @@ const PRESET_CAREER_PATHS = [
 
 export default function RoadmapPage() {
   const navigate = useNavigate();
-  const [roadmap, setRoadmap] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [roadmap, setRoadmap] = useState(() => {
+    try {
+      const saved = localStorage.getItem("crackit:active_roadmap");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
   const [activeTab, setActiveTab] = useState("journey"); // "journey", "companies", "gaps", "actionPlan"
+  const [journeyViewMode, setJourneyViewMode] = useState("syllabus"); // "syllabus" (all 16 topics in order) or "milestone" (trail)
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState(0);
   const [generationError, setGenerationError] = useState(null);
@@ -149,106 +157,615 @@ export default function RoadmapPage() {
   };
 
   const fetchCurrentRoadmap = async () => {
-    setLoading(true);
+    const cached = localStorage.getItem("crackit:active_roadmap");
+    if (!cached) {
+      setLoading(true);
+    }
     try {
       const res = await api.get("/api/roadmap/current");
       if (res.status === 200 && res.data) {
         setRoadmap(res.data);
+        try {
+          localStorage.setItem("crackit:active_roadmap", JSON.stringify(res.data));
+        } catch (e) {
+          console.warn("Could not cache roadmap to localStorage", e);
+        }
       } else {
-        setRoadmap(null);
+        if (!cached) setRoadmap(null);
       }
     } catch (err) {
       console.error("Failed to load roadmap", err);
-      setRoadmap(null);
+      if (!cached) setRoadmap(null);
     } finally {
       setLoading(false);
     }
   };
 
   const buildClientFallbackRoadmap = (data) => {
-    const isFrontend = (data.targetRole || "").toLowerCase().includes("frontend") || (data.targetRole || "").toLowerCase().includes("ui");
-    const isFullstack = (data.targetRole || "").toLowerCase().includes("fullstack") || (data.targetRole || "").toLowerCase().includes("lead");
+    const target = data.targetRole || "Senior Engineer";
+    const current = data.currentRole || "Software Engineer";
+    const weeks = parseInt(data.targetTimelineWeeks) || 8;
+    const skillsLower = (Array.isArray(data.currentSkills) ? data.currentSkills.join(" ") : String(data.currentSkills || "")).toLowerCase();
+    const isFrontend = target.toLowerCase().includes("frontend") || target.toLowerCase().includes("ui") || target.toLowerCase().includes("react");
 
     const milestones = isFrontend
       ? [
           {
             milestoneNumber: 1,
-            title: "Core Web Architecture & Core Web Vitals (CWV)",
+            title: "Core Web Engine, Memory & Interaction to Next Paint (INP)",
             weekSpan: "Weeks 1 - 2",
-            objective: "Master Interaction to Next Paint (INP), LCP image delivery, and bundle optimization.",
+            objective: "Master browser rendering pipelines, main thread scheduling, and Web Vitals.",
             topics: [
-              { id: "m1-t1", title: "INP & Long Task Scheduling", keyConcepts: "requestIdleCallback, task slicing, web workers", practiceTask: "Eliminate main-thread blocking bottlenecks in large React apps", estimatedHours: 12, completed: false },
-              { id: "m1-t2", title: "Virtualization & GPU Compositing", keyConcepts: "DOM node recycling, CSS will-change, containment", practiceTask: "Build 60fps virtualized data grid for 50k rows", estimatedHours: 14, completed: false }
+              {
+                id: "m1-t1",
+                stepNumber: 1,
+                title: "JavaScript Event Loop, Microtasks & Macrotasks",
+                isRevision: skillsLower.includes("javascript"),
+                keyConcepts: "Call stack, event loop, Promise resolution, MutationObserver vs requestAnimationFrame, starvation",
+                practiceTask: "Build a priority task scheduler queue with requestIdleCallback fallback",
+                estimatedHours: 10,
+                interviewQuestions: [
+                  { question: "How does Promise.then() differ from setTimeout(0) in thread execution?", answerHint: "Microtask queue is drained before next tick; setTimeout goes to macrotask timer queue." },
+                  { question: "What causes UI frame jank during high-frequency mouse movements?", answerHint: "Long tasks blocking the main thread; explain requestAnimationFrame batching." }
+                ],
+                readingResource: "MDN - In-depth guide to Event Loop & Concurrency Model",
+                completed: false
+              },
+              {
+                id: "m1-t2",
+                stepNumber: 2,
+                title: "Interaction to Next Paint (INP) & Main Thread Scheduling",
+                isRevision: false,
+                keyConcepts: "Long tasks (>50ms), scheduler.postTask API, yielding with isInputPending, web workers",
+                practiceTask: "Audit and eliminate 200ms INP bottlenecks on interactive 10,000-row data tables",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "How does INP differ from FID, and how do you optimize it?", answerHint: "INP measures all interactions throughout page lifetime, not just first click; yield to main thread with scheduler.yield()." },
+                  { question: "When should you offload state calculations to a Web Worker?", answerHint: "When compute exceeds 16ms per frame; discuss structured clone overhead vs SharedArrayBuffer." }
+                ],
+                readingResource: "web.dev - Optimize Interaction to Next Paint (INP)",
+                completed: false
+              },
+              {
+                id: "m1-t3",
+                stepNumber: 3,
+                title: "DOM Virtualization & Composite Layer GPU Acceleration",
+                isRevision: skillsLower.includes("react"),
+                keyConcepts: "GPU compositing layers, CSS will-change, DOM recycling, windowing scroll offsets",
+                practiceTask: "Build a zero-lag virtualized list rendering 50,000 DOM nodes smoothly at 60fps",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "Why does updating DOM node styles trigger forced synchronous layout?", answerHint: "Reading layout geometry after writing causes immediate layout recalculation (layout thrashing)." },
+                  { question: "Explain CSS contain property and its rendering performance benefits.", answerHint: "contain: layout paint isolates subtree recalculation from the document root." }
+                ],
+                readingResource: "Google Web Fundamentals - Avoid Large, Complex Layouts and Layout Thrashing",
+                completed: false
+              },
+              {
+                id: "m1-t4",
+                stepNumber: 4,
+                title: "Tree-Shaking, Code Splitting & Bundle Performance",
+                isRevision: false,
+                keyConcepts: "ESM static analysis, dynamic import(), Rollup/Vite chunks, Brotli compression, module preload",
+                practiceTask: "Profile Webpack/Vite bundle and reduce first load JS bundle size by 65%",
+                estimatedHours: 10,
+                interviewQuestions: [
+                  { question: "Why cannot CommonJS require() be reliably tree-shaken by bundlers?", answerHint: "require() is dynamic and conditional at runtime; ESM import is statically declared at compile time." },
+                  { question: "What is modulepreload link tag and how does it prevent waterfall downloads?", answerHint: "Fetches and parses ES module dependency trees in parallel before script execution." }
+                ],
+                readingResource: "web.dev - Reduce JavaScript payloads with code splitting",
+                completed: false
+              }
             ]
           },
           {
             milestoneNumber: 2,
-            title: "Micro-Frontends & Distributed State Sync",
+            title: "Enterprise State Architecture & Micro-Frontends",
             weekSpan: "Weeks 3 - 4",
             objective: "Architect enterprise state machines, module federation, and offline recovery.",
             topics: [
-              { id: "m2-t1", title: "Webpack 5 Module Federation", keyConcepts: "Host & remote contracts, shared singletons, version isolation", practiceTask: "Implement independent remote micro-app deployment", estimatedHours: 16, completed: false },
-              { id: "m2-t2", title: "WebSocket Delta Sync & Optimistic UI", keyConcepts: "CRDTs, reconciliation buffers, reconnect replay", practiceTask: "Build real-time collaborative canvas with conflict resolution", estimatedHours: 14, completed: false }
+              {
+                id: "m2-t1",
+                stepNumber: 5,
+                title: "Finite State Machines & Predictable State Engines",
+                isRevision: false,
+                keyConcepts: "XState, state charts, actor model, avoiding impossible states, hierarchical state",
+                practiceTask: "Implement an enterprise multi-step checkout state machine with recovery",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "Why choose a Finite State Machine over simple Boolean flag states?", answerHint: "Eliminates unreachable states and edge-case race conditions." },
+                  { question: "Explain the Actor model pattern in UI state management.", answerHint: "Actors encapsulate state and communicate exclusively through asynchronous messages." }
+                ],
+                readingResource: "David Khourshid - Welcome to the World of Statecharts",
+                completed: false
+              },
+              {
+                id: "m2-t2",
+                stepNumber: 6,
+                title: "Module Federation & Isolated Micro-App Runtimes",
+                isRevision: false,
+                keyConcepts: "Webpack 5 Module Federation, shared singletons, version mismatch isolation, runtime container orchestration",
+                practiceTask: "Implement a federated host loading independent remote micro-apps with shared React singleton",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "How does Module Federation handle two micro-apps requiring different major versions of a library?", answerHint: "Explain singleton configuration vs isolated scopes in ModuleFederationPlugin." },
+                  { question: "What happens when a remote micro-app fails to load over the network?", answerHint: "Implement circuit breaker boundary and graceful UI degradation." }
+                ],
+                readingResource: "Webpack Docs - Module Federation Architecture",
+                completed: false
+              },
+              {
+                id: "m2-t3",
+                stepNumber: 7,
+                title: "Optimistic UI Updates & Delta Synchronization",
+                isRevision: false,
+                keyConcepts: "Rollback buffers, optimistic response IDs, conflict detection, reconnect replay",
+                practiceTask: "Build a high-velocity collaborative task list with instantaneous optimistic writes",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "How do you roll back optimistic UI mutations without screen flashing?", answerHint: "Keep pristine snapshots before applying optimistic delta; revert on rejection." },
+                  { question: "Explain idempotent mutation keys in client-server communication.", answerHint: "UUID client mutation keys prevent duplicate action execution on reconnect." }
+                ],
+                readingResource: "Martin Fowler - LMAX Architecture and Optimistic UI Patterns",
+                completed: false
+              },
+              {
+                id: "m2-t4",
+                stepNumber: 8,
+                title: "Web Workers & Heavy Background Compute",
+                isRevision: false,
+                keyConcepts: "SharedWorker, ServiceWorker caching, Comlink RPC bridge, Transferable Objects",
+                practiceTask: "Process 50MB CSV data parsing inside a dedicated worker with sub-5ms UI responsiveness",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "What are Transferable Objects in postMessage() and why are they zero-copy?", answerHint: "Memory ownership transfers directly to the worker thread without memory serialization." },
+                  { question: "How does a SharedWorker coordinate state across multiple browser tabs?", answerHint: "Multiple browsing contexts connect via MessagePorts to a single shared execution context." }
+                ],
+                readingResource: "MDN - Transferable Objects and Worker Performance",
+                completed: false
+              }
+            ]
+          },
+          {
+            milestoneNumber: 3,
+            title: "Real-Time Collaboration & CRDTs",
+            weekSpan: "Weeks 5 - 6",
+            objective: "Build conflict-free real-time collaborative applications with offline resilience.",
+            topics: [
+              {
+                id: "m3-t1",
+                stepNumber: 9,
+                title: "WebSocket Resilient State Reconnection & Heartbeats",
+                isRevision: false,
+                keyConcepts: "Exponential backoff, jitter, message deduplication, missed event sequence replay",
+                practiceTask: "Build a production-grade resilient WebSocket client with automatic state resynchronization",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "How do you prevent thundering herd when a WebSocket server cluster restarts?", answerHint: "Apply exponential backoff combined with randomized decorrelated jitter." },
+                  { question: "How do you ensure no messages are lost during client network handover (Wi-Fi to 5G)?", answerHint: "Use sequence-numbered message buffers and ACK protocols." }
+                ],
+                readingResource: "RFC 6455 - The WebSocket Protocol Specification",
+                completed: false
+              },
+              {
+                id: "m3-t2",
+                stepNumber: 10,
+                title: "Conflict-Free Replicated Data Types (CRDTs) & Yjs",
+                isRevision: false,
+                keyConcepts: "State-based vs operation-based CRDTs, Yjs delta encoding, eventual consistency in UI",
+                practiceTask: "Implement a collaborative multi-user live document with zero conflict loss",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "What is the mathematical difference between Operational Transformation (OT) and CRDTs?", answerHint: "OT requires a centralized coordination server to transform operations; CRDTs are commutative and associative." },
+                  { question: "How does Yjs prevent tombstone memory bloat in long-lived text sessions?", answerHint: "Block merging and garbage collection algorithms." }
+                ],
+                readingResource: "Martin Kleppmann - Conflict-Free Replicated Data Types",
+                completed: false
+              },
+              {
+                id: "m3-t3",
+                stepNumber: 11,
+                title: "IndexedDB Offline-First Caching & Workbox",
+                isRevision: false,
+                keyConcepts: "Service Worker lifecycle, Cache-First vs Stale-While-Revalidate, IndexedDB transactions",
+                practiceTask: "Build an offline-first workspace that functions seamlessly in airplane mode",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "Explain the difference between Cache API and IndexedDB for offline storage.", answerHint: "Cache API stores request/response pairs; IndexedDB is a structured transactional NoSQL store." },
+                  { question: "What happens when a new Service Worker is waiting to activate?", answerHint: "Discuss skipWaiting() and lifecycle transitions without corrupting open tabs." }
+                ],
+                readingResource: "Google Chrome Developers - Offline Cookbook",
+                completed: false
+              },
+              {
+                id: "m3-t4",
+                stepNumber: 12,
+                title: "Web Security: CSP, Cross-Origin Isolation & Token Storage",
+                isRevision: false,
+                keyConcepts: "Content Security Policy (CSP), HTTPOnly SameSite cookies, Subresource Integrity, Cross-Origin-Embedder-Policy",
+                practiceTask: "Harden a client-side banking portal to achieve zero XSS vulnerability",
+                estimatedHours: 10,
+                interviewQuestions: [
+                  { question: "Why should authentication tokens never be stored in localStorage?", answerHint: "Any successful XSS exploit can immediately read and exfiltrate localStorage tokens." },
+                  { question: "Explain how strict CSP nonce policies stop inline script injection.", answerHint: "Scripts only execute if their nonce matches the cryptographically signed server response header." }
+                ],
+                readingResource: "OWASP - Single Page Application Security Guidelines",
+                completed: false
+              }
+            ]
+          },
+          {
+            milestoneNumber: 4,
+            title: "UI Architecture Bar-Raiser & Executive Calibration",
+            weekSpan: "Weeks 7 - 8",
+            objective: "Deliver high-conviction trade-off justifications and defend architecture decisions.",
+            topics: [
+              {
+                id: "m4-t1",
+                stepNumber: 13,
+                title: "90-Minute Timed Frontend Machine Coding Gauntlet",
+                isRevision: false,
+                keyConcepts: "Clean separation of concerns, accessibility (a11y ARIA), zero dependencies, edge case handling",
+                practiceTask: "Code an autocomplete search dropdown with keyboard navigation and debounce under 60 minutes",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "How do you make an autocomplete dropdown fully accessible to screen readers?", answerHint: "Implement WAI-ARIA 1.2 Combobox pattern: aria-expanded, aria-activedescendant, role=listbox." },
+                  { question: "Explain debouncing vs throttling with leading and trailing execution edge cases.", answerHint: "Throttle limits execution frequency; debounce delays execution until quiet period." }
+                ],
+                readingResource: "WAI-ARIA Authoring Practices Guide - Combobox Pattern",
+                completed: false
+              },
+              {
+                id: "m4-t2",
+                stepNumber: 14,
+                title: "Design System Architecture & Headless Component Primitives",
+                isRevision: false,
+                keyConcepts: "Headless UI patterns, polymorphic components (as prop), CSS variables theming, zero-runtime styling",
+                practiceTask: "Architect a production-grade design system component library with theme tokens",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "What are the engineering advantages of Headless UI libraries over styled UI kits?", answerHint: "Separates complex state and accessibility logic from visual styling; enables full branding customization." },
+                  { question: "Explain how CSS variables enable zero-rerender dark mode switching.", answerHint: "Toggling root HTML attributes swaps token values directly on GPU layers without React tree rerender." }
+                ],
+                readingResource: "Robin Rendle - System Design for Front-End Engineers",
+                completed: false
+              },
+              {
+                id: "m4-t3",
+                stepNumber: 15,
+                title: "Front-End System Design: High-Scale Collaborative Canvas (Figma/Miro)",
+                isRevision: false,
+                keyConcepts: "Canvas vs SVG, spatial indexing (R-Tree/QuadTree), view frustum culling, delta sync",
+                practiceTask: "Design the end-to-end architecture for a live collaborative whiteboarding platform",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "Why does DOM-based rendering fail when visualizing 100,000 interactive canvas nodes?", answerHint: "DOM tree layout recalculation and memory overhead; use HTML5 Canvas or WebGL with spatial index culling." },
+                  { question: "How do you handle panning and zooming without recalculating all element boundaries?", answerHint: "Use transformation matrix multiplication on the root viewport context." }
+                ],
+                readingResource: "Figma Engineering Blog - WebGL and Collaborative Real-Time Architecture",
+                completed: false
+              },
+              {
+                id: "m4-t4",
+                stepNumber: 16,
+                title: "Staff-Level Architectural Trade-Off Defense & Hiring Rubrics",
+                isRevision: false,
+                keyConcepts: "SSR vs SSG vs ISR vs Client Hydration, streaming HTML with Suspense, defending decisions",
+                practiceTask: "Conduct full bar-raiser mock interview defending architecture against Staff Engineers",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "How does React 18 Selective Hydration solve the all-or-nothing hydration bottleneck?", answerHint: "Suspense boundaries allow streaming HTML chunks and prioritize user-interacted sections for hydration." },
+                  { question: "Defend why your team should migrate or NOT migrate to Next.js App Router.", answerHint: "Articulate realistic trade-offs: server action ergonomics vs deployment lock-in and debugging complexity." }
+                ],
+                readingResource: "Dan Abramov - The Two Reacts: Architecture and Mental Models",
+                completed: false
+              }
             ]
           }
         ]
       : [
           {
             milestoneNumber: 1,
-            title: "Distributed Concurrency & Low-Level Design (LLD)",
+            title: "Core Language Mechanics, Memory Model & Concurrency Deep Dive",
             weekSpan: "Weeks 1 - 2",
-            objective: "Master writing clean, concurrency-safe, test-driven code under 90-minute timers.",
+            objective: "Master thread safety, Java/JVM memory model, lock-free structures, and low-level mechanics.",
             topics: [
-              { id: "m1-t1", title: "Distributed Locks & Redis Lua Scripts", keyConcepts: "Atomic execution, lease auto-renewal, fail-open design", practiceTask: "Implement resilient distributed lock with lease heartbeats", estimatedHours: 14, completed: false },
-              { id: "m1-t2", title: "Financial Webhook Idempotency", keyConcepts: "HMAC-SHA256 signature verification, row-level locks, state machines", practiceTask: "Build idempotent webhook receiver handling 5,000 req/sec", estimatedHours: 15, completed: false },
-              { id: "m1-t3", title: "Cache Stampede & Mutex Invalidation", keyConcepts: "TTL jitter, probabilistic early expiration, cache-aside", practiceTask: "Benchmark cache stampede resilience with 10k threads", estimatedHours: 12, completed: false }
+              {
+                id: "m1-t1",
+                stepNumber: 1,
+                title: "Java Memory Model (JMM), Happens-Before & Volatile Semantics",
+                isRevision: skillsLower.includes("java"),
+                keyConcepts: "CPU cache coherence (MESI), CPU instruction reordering, memory barriers, volatile read/write semantics",
+                practiceTask: "Build a high-performance thread-safe double-checked singleton and verify zero race conditions under 1,000 threads",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "Why does Double-Checked Locking fail without volatile in Java?", answerHint: "Instruction reordering allows the reference to be assigned before constructor execution finishes; volatile enforces happens-before relationship." },
+                  { question: "Explain the difference between write barriers and read barriers at CPU level.", answerHint: "Write barriers flush CPU store buffers; read barriers invalidate stale CPU cache lines." }
+                ],
+                readingResource: "JSR-133: Java Memory Model and Thread Specification",
+                completed: false
+              },
+              {
+                id: "m1-t2",
+                stepNumber: 2,
+                title: "Thread Pools, Work-Stealing & ExecutorService Lifecycle",
+                isRevision: skillsLower.includes("java") || skillsLower.includes("spring"),
+                keyConcepts: "ThreadPoolExecutor core/max sizing, task queuing (LinkedBlockingQueue vs SynchronousQueue), rejection policies, WorkStealingPool",
+                practiceTask: "Implement a custom ThreadPool with bounded queues, dynamic worker scaling, and custom saturation rejection telemetry",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "Why does Executors.newFixedThreadPool() risk OutOfMemoryError in production?", answerHint: "It uses an unbounded LinkedBlockingQueue which grows indefinitely under sustained spikes." },
+                  { question: "How does ForkJoinPool work-stealing algorithm prevent thread idle time?", answerHint: "Idle worker threads steal tasks from the tail of deque queues owned by busy threads." }
+                ],
+                readingResource: "Brian Goetz - Java Concurrency in Practice (Chapter 8)",
+                completed: false
+              },
+              {
+                id: "m1-t3",
+                stepNumber: 3,
+                title: "Lock-Free Programming, CAS & Atomic Variables",
+                isRevision: false,
+                keyConcepts: "Hardware CMPXCHG instruction, ABA problem, AtomicStampedReference, LongAdder cell striping under high contention",
+                practiceTask: "Implement a high-throughput lock-free ring buffer (Disruptor pattern) benchmarking 10 million ops/sec",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "Why does LongAdder significantly outperform AtomicLong under high write concurrency?", answerHint: "LongAdder distributes updates across internal Cell array cells to eliminate bus lock contention." },
+                  { question: "What is the ABA problem in CAS operations and how is it mitigated?", answerHint: "A value changes from A to B and back to A; resolved using version stamps via AtomicStampedReference." }
+                ],
+                readingResource: "LMAX Disruptor Architecture Paper - Martin Fowler & Mike Barker",
+                completed: false
+              },
+              {
+                id: "m1-t4",
+                stepNumber: 4,
+                title: "JVM Garbage Collection Internals & Latency Profiling",
+                isRevision: skillsLower.includes("java"),
+                keyConcepts: "Generational hypothesis, G1GC mixed collection, ZGC colored pointers & load barriers, escape analysis",
+                practiceTask: "Profile a Spring Boot service with async profiler, identify memory allocation hotspots, and reduce GC pauses under 5ms",
+                estimatedHours: 12,
+                interviewQuestions: [
+                  { question: "How does ZGC achieve sub-millisecond maximum pause times even on multi-terabyte heaps?", answerHint: "Performs marking, relocation, and compaction concurrently with application threads using colored pointers and load barriers." },
+                  { question: "Explain what happens during a Stop-The-World (STW) pause in G1GC.", answerHint: "All application mutator threads are brought to safepoints to ensure heap reference consistency." }
+                ],
+                readingResource: "OpenJDK ZGC Architecture Guide & JVM Safepoint Internals",
+                completed: false
+              }
             ]
           },
           {
             milestoneNumber: 2,
-            title: "Distributed Systems & Event-Driven Architecture",
+            title: "Low-Level Design (LLD), Machine Coding & Clean Architecture",
             weekSpan: "Weeks 3 - 4",
-            objective: "Design event streaming pipelines with zero message loss and sub-50ms p99 latency.",
+            objective: "Master writing clean, concurrency-safe, test-driven Java code under strict 90-minute timers.",
             topics: [
-              { id: "m2-t1", title: "Kafka Partitioning & Consumer Groups", keyConcepts: "At-least-once semantics, consumer rebalance, DLQs", practiceTask: "Build high-throughput order queue with partition-keyed ordering", estimatedHours: 18, completed: false },
-              { id: "m2-t2", title: "HTAP Databases & Raft Consensus", keyConcepts: "Raft consensus, TiKV row-store, TiFlash columnar scans", practiceTask: "Design HTAP telemetry pipeline balancing OLTP writes with OLAP reads", estimatedHours: 16, completed: false }
+              {
+                id: "m2-t1",
+                stepNumber: 5,
+                title: "SOLID Principles & Clean Domain Modeling (LLD)",
+                isRevision: skillsLower.includes("oop") || skillsLower.includes("design"),
+                keyConcepts: "Single Responsibility, Open-Closed via Strategy/Factory, Interface Segregation, Domain-Driven Design aggregates",
+                practiceTask: "Refactor a monolithic invoice service into a clean extensible strategy-driven architecture with 100% unit tests",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "How do you enforce Open-Closed Principle when adding new payment providers (Razorpay, Stripe)?", answerHint: "Define a PaymentGateway SPI interface and register implementations via Spring dependency injection registry." },
+                  { question: "Explain Dependency Inversion Principle vs Dependency Injection.", answerHint: "DIP is the architectural principle that high-level modules should depend on abstractions; DI is the creational pattern realizing it." }
+                ],
+                readingResource: "Robert C. Martin - Clean Architecture: A Craftsman's Guide",
+                completed: false
+              },
+              {
+                id: "m2-t2",
+                stepNumber: 6,
+                title: "Thread-Safe In-Memory Key-Value Store with TTL & Eviction",
+                isRevision: false,
+                keyConcepts: "ConcurrentHashMap segmented locking, doubly-linked list for O(1) LRU/LFU, active vs passive TTL expiration",
+                practiceTask: "Build an in-memory key-value cache with LRU eviction and thread-safe background expiry in 90 minutes",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "How do you design O(1) eviction for Least Frequently Used (LFU) cache?", answerHint: "Use two hash maps: one mapping keys to nodes, and another mapping frequencies to doubly-linked lists." },
+                  { question: "How does ConcurrentHashMap achieve high concurrency without locking the entire table?", answerHint: "Uses CAS for bucket insertions and synchronizes only on the head node of a hash bucket." }
+                ],
+                readingResource: "Doug Lea - ConcurrentHashMap Internals & Segment Locking",
+                completed: false
+              },
+              {
+                id: "m2-t3",
+                stepNumber: 7,
+                title: "Distributed Sliding-Window Rate Limiter (Token Bucket / Lua)",
+                isRevision: skillsLower.includes("redis"),
+                keyConcepts: "Token Bucket vs Leaky Bucket vs Sliding Window Log, Redis Lua atomic script execution, HTTP 429 Retry-After",
+                practiceTask: "Implement a distributed sliding-window rate limiter using Redis Lua handling 10,000 requests/sec with zero drift",
+                estimatedHours: 15,
+                interviewQuestions: [
+                  { question: "Why does a naive Redis GET then INCR rate-limiting approach cause race conditions?", answerHint: "Non-atomic check-then-act allows multiple concurrent threads to exceed threshold; solve with atomic Lua script execution." },
+                  { question: "Compare Token Bucket vs Sliding Window Counter for bursty traffic.", answerHint: "Token Bucket allows configured bursts while enforcing steady rate; Sliding Window Counter strictly smooths request density." }
+                ],
+                readingResource: "Stripe Engineering Blog - Scaling rate limiters with Redis and token buckets",
+                completed: false
+              },
+              {
+                id: "m2-t4",
+                stepNumber: 8,
+                title: "Idempotent Financial Webhook Processing & State Machines",
+                isRevision: skillsLower.includes("rest") || skillsLower.includes("spring"),
+                keyConcepts: "HMAC-SHA256 signature verification, idempotency keys, SELECT FOR UPDATE row locks, finite state machine transitions",
+                practiceTask: "Build an idempotent webhook processing engine handling 5,000 duplicate requests/sec with zero double-credits",
+                estimatedHours: 15,
+                interviewQuestions: [
+                  { question: "How do you guarantee that a webhook callback arriving simultaneously from 3 network retries executes only once?", answerHint: "Insert unique idempotency key with unique constraint; use optimistic locking or row-level lock on account record." },
+                  { question: "What is the difference between at-least-once and exactly-once processing in payment state transitions?", answerHint: "At-least-once accepts duplicates and relies on deterministic state transitions to ensure idempotent state mutation." }
+                ],
+                readingResource: "Brandur Leach - Designing Robust and Idempotent APIs with Transactional Outboxes",
+                completed: false
+              }
             ]
           },
           {
             milestoneNumber: 3,
-            title: "High-Level System Design & Scaling to 100k QPS",
+            title: "Database Internals, Query Optimization & Distributed Caching",
             weekSpan: "Weeks 5 - 6",
-            objective: "Architect fault-tolerant systems handling multi-region failover and distributed transactions.",
+            objective: "Design fault-tolerant storage, cache-aside strategies, and event streaming pipelines.",
             topics: [
-              { id: "m3-t1", title: "Distributed Transaction Sagas (Orchestration vs Choreography)", keyConcepts: "Compensating transactions, forward recovery, idempotency keys", practiceTask: "Implement multi-service order saga with rollback compensations", estimatedHours: 16, completed: false },
-              { id: "m3-t2", title: "Multi-Datacenter Consistency & CAP Trade-Offs", keyConcepts: "Active-Active topology, quorum reads/writes, conflict resolution", practiceTask: "Design globally distributed rate-limiting mesh with local fallback", estimatedHours: 14, completed: false }
+              {
+                id: "m3-t1",
+                stepNumber: 9,
+                title: "B+Tree Indexes, Composite Index Selectivity & EXPLAIN ANALYZE",
+                isRevision: skillsLower.includes("sql") || skillsLower.includes("mysql") || skillsLower.includes("postgres"),
+                keyConcepts: "B+Tree node splits, leftmost prefix rule, index covering scans, temporary table elimination, cardinality",
+                practiceTask: "Analyze slow queries on a 10-million row database, optimize composite indexes, and reduce latency from 800ms to 4ms",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "Why does placing a low-cardinality column first in a composite index hurt performance?", answerHint: "Leftmost prefix rule requires high selectivity at leading columns to eliminate maximum rows during B+Tree traversal." },
+                  { question: "Explain what 'Using filesort' and 'Using index' mean in MySQL EXPLAIN plan output.", answerHint: "'Using filesort' indicates external sorting outside index; 'Using index' means covering index satisfied query without table row lookup." }
+                ],
+                readingResource: "Markus Winand - Use The Index, Luke! A Guide to Database Performance",
+                completed: false
+              },
+              {
+                id: "m3-t2",
+                stepNumber: 10,
+                title: "Transaction Isolation Levels, MVCC & Deadlock Prevention",
+                isRevision: skillsLower.includes("sql") || skillsLower.includes("mysql"),
+                keyConcepts: "Read Committed vs Repeatable Read, Multi-Version Concurrency Control (MVCC) undo logs, gap locks, next-key locks",
+                practiceTask: "Simulate phantom reads and deadlocks under concurrent transactions and write deadlock-free update procedures",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "How does MySQL InnoDB prevent phantom reads in Repeatable Read isolation level?", answerHint: "Uses next-key locks (combining record lock and gap lock) to prevent other transactions from inserting into scanned range." },
+                  { question: "What causes a deadlock during concurrent UPDATE statements on secondary indexes?", answerHint: "Transactions acquire locks on secondary index and primary clustered index in opposite orders; fix by acquiring locks in deterministic sequence." }
+                ],
+                readingResource: "MySQL 8.0 Reference Manual - InnoDB Multi-Versioning & Locking Details",
+                completed: false
+              },
+              {
+                id: "m3-t3",
+                stepNumber: 11,
+                title: "Cache-Aside Patterns, Mutex Invalidation & Cache Stampede",
+                isRevision: skillsLower.includes("redis"),
+                keyConcepts: "Cache-Aside vs Write-Through, cache stampede (thundering herd), probabilistic early expiration (XFetch), TTL jitter",
+                practiceTask: "Implement a resilient Redis cache-aside layer with distributed mutex locks and benchmark under 10,000 concurrent threads",
+                estimatedHours: 14,
+                interviewQuestions: [
+                  { question: "What is cache stampede and how does probabilistic early expiration solve it?", answerHint: "When a hot key expires, thousands of threads query the database simultaneously; XFetch algorithm recomputes cache before actual expiry." },
+                  { question: "Should you delete or update a cache entry when database writes succeed?", answerHint: "Delete cache entry to avoid race conditions with concurrent database read-write threads." }
+                ],
+                readingResource: "VLDB Research Paper - Optimal Probabilistic Cache Expiration (XFetch Algorithm)",
+                completed: false
+              },
+              {
+                id: "m3-t4",
+                stepNumber: 12,
+                title: "Database Sharding, Consistent Hashing & Read-Replicas",
+                isRevision: false,
+                keyConcepts: "Horizontal sharding keys, virtual nodes in consistent hashing, replication lag mitigation, dual-write challenges",
+                practiceTask: "Design a sharded customer database routing queries across 4 database instances with consistent hash ring",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "How do you avoid hot-spotting when sharding by customer_id or created_at timestamp?", answerHint: "Timestamp sharding routes all current writes to the latest shard; combine tenant_id with hash prefix to distribute writes." },
+                  { question: "How do you handle read-your-own-writes consistency when using asynchronous read-replicas?", answerHint: "Route queries from recently writing users to primary master database for the duration of replication lag window." }
+                ],
+                readingResource: "AWS DynamoDB Architecture & Consistent Hashing Papers",
+                completed: false
+              }
             ]
           },
           {
             milestoneNumber: 4,
-            title: "Bar-Raiser Mock Calibration & Executive Defense",
+            title: "Event-Driven Systems, High-Level Architecture (HLD) & Scale",
             weekSpan: "Weeks 7 - 8",
-            objective: "Deliver high-conviction trade-off justifications and defend architecture decisions.",
+            objective: "Architect fault-tolerant systems handling multi-region failover and distributed transactions.",
             topics: [
-              { id: "m4-t1", title: "90-Minute Timed Machine Coding Gauntlet", keyConcepts: "SOLID principles, thread safety, unit test coverage, extensibility", practiceTask: "Code in-memory key-value store with TTL and eviction under 90 minutes", estimatedHours: 15, completed: false },
-              { id: "m4-t2", title: "System Design Defense & Trade-Off Calibration", keyConcepts: "Back-of-envelope math, bottleneck diagnosis, failure mode analysis", practiceTask: "Defend end-to-end design for global ride-hailing dispatcher", estimatedHours: 15, completed: false }
+              {
+                id: "m4-t1",
+                stepNumber: 13,
+                title: "Apache Kafka Architecture: Partitions, Offsets & Consumer Lag",
+                isRevision: skillsLower.includes("kafka"),
+                keyConcepts: "Commit log internals, partition key distribution, at-least-once delivery, consumer group cooperative rebalance",
+                practiceTask: "Build a high-volume event processing pipeline with partition-keyed ordering, dead letter queues (DLQs), and auto-recovery",
+                estimatedHours: 18,
+                interviewQuestions: [
+                  { question: "What happens when a Kafka consumer triggers a group rebalance in a high-throughput cluster?", answerHint: "Partitions are revoked and reassigned; Cooperative Sticky Assignor minimizes stop-the-world partition transfer." },
+                  { question: "How do you guarantee strictly ordered message processing across multiple partitions in Kafka?", answerHint: "Messages within a single partition are ordered; route related events with identical partition keys." }
+                ],
+                readingResource: "Jay Kreps - Questioning the Lambda Architecture & The Log",
+                completed: false
+              },
+              {
+                id: "m4-t2",
+                stepNumber: 14,
+                title: "Transactional Outbox Pattern & Change Data Capture (CDC)",
+                isRevision: false,
+                keyConcepts: "Dual-write failure modes, outbox table in local DB transaction, Debezium CDC via MySQL binlog, zero message loss",
+                practiceTask: "Implement the Transactional Outbox pattern with MySQL and Kafka with zero dual-write inconsistency",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "Why is executing a database commit and then publishing to Kafka in the same method dangerous?", answerHint: "Application crashes after DB commit but before Kafka send cause silent message loss (dual-write problem)." },
+                  { question: "How does Debezium read changes from MySQL without impacting application query latency?", answerHint: "Streams committed changes directly from the MySQL binary log asynchronously without query locks." }
+                ],
+                readingResource: "Microservices.io - Transactional Outbox Pattern by Chris Richardson",
+                completed: false
+              },
+              {
+                id: "m4-t3",
+                stepNumber: 15,
+                title: "Distributed Transactions: Saga Orchestration & Resilience4j",
+                isRevision: false,
+                keyConcepts: "Two-Phase Commit (2PC) bottlenecks, Saga orchestration vs choreography, compensating transactions, Circuit Breakers",
+                practiceTask: "Implement a multi-service order saga with rollback compensations and Resilience4j circuit breakers",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "Why is Two-Phase Commit (2PC) rarely used in cloud-scale microservice architectures?", answerHint: "2PC is blocking and holds locks across all participants; network partitions cause coordinator stall and cascading timeouts." },
+                  { question: "How do you design a compensating transaction when an intermediate step cannot be physically undone?", answerHint: "Use forward recovery with alerts or design semantic reversals (e.g. refunding money rather than canceling shipped items)." }
+                ],
+                readingResource: "Caitie McCaffrey - Applying the Saga Pattern to Distributed Microservices",
+                completed: false
+              },
+              {
+                id: "m4-t4",
+                stepNumber: 16,
+                title: "Multi-Region System Design, CAP Trade-Offs & Bar-Raiser Defense",
+                isRevision: false,
+                keyConcepts: "Active-Active multi-datacenter topology, conflict resolution (CRDT/LWW), back-of-the-envelope math, live failure defense",
+                practiceTask: "Defend an end-to-end design for a global ride-hailing or payment dispatcher against Staff Engineers",
+                estimatedHours: 16,
+                interviewQuestions: [
+                  { question: "Design a globally distributed payment platform handling 50,000 TPS with sub-100ms response time.", answerHint: "Structure back-of-envelope math, choose AP vs CP boundary per service, discuss ledger reconciliation and active-active DB clustering." },
+                  { question: "How do you resolve conflicting concurrent writes to the same account across US and EU data centers?", answerHint: "Discuss vector clocks, CRDTs, or pinning account writes to a primary geographic home shard." }
+                ],
+                readingResource: "Designing Data-Intensive Applications (DDIA) - Martin Kleppmann (Chapters 7-9)",
+                completed: false
+              }
             ]
           }
         ];
 
     return {
       id: "quest-" + Date.now(),
-      targetRole: data.targetRole || "Senior Backend / Staff Architect",
+      targetRole: target,
       targetCompensation: data.targetCompensation || "₹34 - 48 LPA",
-      targetTimelineWeeks: data.targetTimelineWeeks || 8,
+      targetTimelineWeeks: weeks,
       overallScore: 84,
       overallProgress: 0,
       roadmapData: {
+        feasibility: {
+          status: "REALISTIC",
+          score: 84,
+          verdict: `High-conviction trajectory mapped to ${target}. Complete all 16 progressive milestones.`,
+          gapSeverity: "MODERATE",
+          reasons: [
+            `Target role demands verifiable depth in low-level concurrency, storage indexing, and event-driven distributed systems.`,
+            `A ${weeks}-week timeline is realistic with 15-20 hours/week dedicated to hands-on machine coding and system design defense.`
+          ],
+          suggestedAdjustment: {
+            recommendedRole: target,
+            recommendedWeeks: weeks,
+            actionableNote: "Master the first 8 topics (concurrency and LLD) before taking live system design interviews."
+          }
+        },
         readiness: {
           overallScore: 84,
-          verdict: `High-conviction trajectory mapped to ${data.targetRole}. Focus on distributed systems and concurrency.`,
+          verdict: `High-conviction trajectory mapped to ${target}. Focus on distributed systems and concurrency.`,
           marketDemand: "VERY_HIGH",
-          estimatedWeeks: data.targetTimelineWeeks || 8,
+          estimatedWeeks: weeks,
           salaryUpliftPotential: "2.8x - 3.5x"
         },
         skillGaps: {
@@ -300,11 +817,33 @@ export default function RoadmapPage() {
 
     try {
       const res = await api.post("/api/roadmap/generate", payload);
-      setRoadmap(res.data);
+      if (res.data) {
+        setRoadmap(res.data);
+        try {
+          localStorage.setItem("crackit:active_roadmap", JSON.stringify(res.data));
+        } catch (e) {
+          console.warn("Could not cache to localStorage", e);
+        }
+      }
     } catch (err) {
       console.warn("Backend synthesis call delayed or cold-starting; engaging instant calibrated roadmap synthesis", err);
       const fallback = buildClientFallbackRoadmap(payload);
       setRoadmap(fallback);
+      try {
+        localStorage.setItem("crackit:active_roadmap", JSON.stringify(fallback));
+      } catch (e) {
+        console.warn("Could not cache fallback to localStorage", e);
+      }
+      try {
+        api.post("/api/roadmap/save", fallback).then((saveRes) => {
+          if (saveRes?.data) {
+            setRoadmap(saveRes.data);
+            try {
+              localStorage.setItem("crackit:active_roadmap", JSON.stringify(saveRes.data));
+            } catch (ignored) {}
+          }
+        }).catch(e => console.warn("Failed to persist fallback roadmap to backend", e));
+      } catch (e) {}
     } finally {
       setActiveTab("journey");
       setSelectedMilestoneIdx(0);
@@ -334,11 +873,51 @@ export default function RoadmapPage() {
 
   const handleToggleTopic = async (topicId, currentCompleted) => {
     if (!roadmap) return;
+    const nextCompleted = !currentCompleted;
+
+    // Optimistically update local state & localStorage
+    const updated = JSON.parse(JSON.stringify(roadmap));
+    let totalTopics = 0;
+    let completedTopics = 0;
+
+    (updated.roadmapData?.milestones || []).forEach((m) => {
+      (m.topics || []).forEach((t) => {
+        if (t.id === topicId) {
+          t.completed = nextCompleted;
+        }
+        totalTopics++;
+        if (t.completed) completedTopics++;
+      });
+    });
+
+    const newProgress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+    updated.overallProgress = newProgress;
+
+    setRoadmap(updated);
     try {
-      const res = await api.post(
-        `/api/roadmap/${roadmap.id}/topics/${topicId}/progress?completed=${!currentCompleted}`
-      );
-      setRoadmap(res.data);
+      localStorage.setItem("crackit:active_roadmap", JSON.stringify(updated));
+    } catch (e) {}
+
+    try {
+      if (roadmap.id && !roadmap.id.startsWith("quest-")) {
+        const res = await api.post(
+          `/api/roadmap/${roadmap.id}/topics/${topicId}/progress?completed=${nextCompleted}`
+        );
+        if (res.data) {
+          setRoadmap(res.data);
+          try {
+            localStorage.setItem("crackit:active_roadmap", JSON.stringify(res.data));
+          } catch (e) {}
+        }
+      } else {
+        const res = await api.post("/api/roadmap/save", updated);
+        if (res.data) {
+          setRoadmap(res.data);
+          try {
+            localStorage.setItem("crackit:active_roadmap", JSON.stringify(res.data));
+          } catch (e) {}
+        }
+      }
     } catch (err) {
       console.error("Failed to update topic progress", err);
     }
@@ -910,14 +1489,448 @@ export default function RoadmapPage() {
               TAB 1: INTERACTIVE JOURNEY MAP WITH MOVING CANDIDATE FIGURE
           ───────────────────────────────────────────────────────────── */}
           {activeTab === "journey" && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: 28,
-                alignItems: "start"
-              }}
-            >
+            <div>
+              {/* View Mode Toggle Header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 24,
+                  background: "#ffffff",
+                  padding: "12px 18px",
+                  borderRadius: 18,
+                  border: "1.5px solid #ede9fe",
+                  boxShadow: "0 2px 10px rgba(124, 58, 237, 0.04)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      background: "rgba(124, 58, 237, 0.1)",
+                      color: "#7c3aed",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18
+                    }}
+                  >
+                    <i className="ti ti-layout-list" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1a1040" }}>
+                      Curriculum View Mode
+                    </div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>
+                      Switch between complete syllabus breakdown and interactive milestone trail
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    background: "#f5f3ff",
+                    padding: 3,
+                    borderRadius: 12,
+                    border: "1px solid #ddd6fe"
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setJourneyViewMode("syllabus")}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: journeyViewMode === "syllabus" ? "#7c3aed" : "transparent",
+                      color: journeyViewMode === "syllabus" ? "#ffffff" : "#6d28d9",
+                      fontWeight: 800,
+                      fontSize: 12.5,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      boxShadow: journeyViewMode === "syllabus" ? "0 2px 8px rgba(124, 58, 237, 0.3)" : "none",
+                      transition: "all 0.15s"
+                    }}
+                  >
+                    <i className="ti ti-books" />
+                    Progressive Syllabus (All 16 Topics)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJourneyViewMode("milestone")}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: journeyViewMode === "milestone" ? "#7c3aed" : "transparent",
+                      color: journeyViewMode === "milestone" ? "#ffffff" : "#6d28d9",
+                      fontWeight: 800,
+                      fontSize: 12.5,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      boxShadow: journeyViewMode === "milestone" ? "0 2px 8px rgba(124, 58, 237, 0.3)" : "none",
+                      transition: "all 0.15s"
+                    }}
+                  >
+                    <i className="ti ti-route" />
+                    Milestone Trail & Station Figure
+                  </button>
+                </div>
+              </div>
+
+              {journeyViewMode === "syllabus" ? (
+                /* ─── FULL 16-TOPIC PROGRESSIVE SYLLABUS VIEW ─── */
+                <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+                  {milestones.map((m, mIdx) => {
+                    const mTopics = m.topics || [];
+                    const mDoneCount = mTopics.filter((t) => t.completed).length;
+                    const isMComplete = mTopics.length > 0 && mDoneCount === mTopics.length;
+
+                    return (
+                      <div
+                        key={mIdx}
+                        style={{
+                          background: "#ffffff",
+                          borderRadius: 22,
+                          border: isMComplete ? "1.5px solid #86efac" : "1.5px solid #ede9fe",
+                          padding: "24px 26px",
+                          boxShadow: "0 6px 20px rgba(124, 58, 237, 0.05)"
+                        }}
+                      >
+                        {/* Milestone Phase Header */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 12,
+                            paddingBottom: 16,
+                            marginBottom: 20,
+                            borderBottom: "1px solid #f1f5f9"
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                              <span
+                                style={{
+                                  padding: "3px 10px",
+                                  borderRadius: 999,
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  background: isMComplete ? "#dcfce7" : "#ede9fe",
+                                  color: isMComplete ? "#15803d" : "#6d28d9",
+                                  textTransform: "uppercase"
+                                }}
+                              >
+                                {m.weekSpan || `Phase ${mIdx + 1}`}
+                              </span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}>
+                                {mDoneCount}/{mTopics.length} Topics Mastered
+                              </span>
+                            </div>
+                            <h3 style={{ fontSize: 19, fontWeight: 800, color: "#1a1040", margin: "0 0 4px" }}>
+                              {m.title}
+                            </h3>
+                            {m.objective && (
+                              <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                                🎯 <strong>Objective:</strong> {m.objective}
+                              </p>
+                            )}
+                          </div>
+
+                          <div
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: "50%",
+                              background: isMComplete ? "#dcfce7" : "#f5f3ff",
+                              color: isMComplete ? "#15803d" : "#7c3aed",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 900,
+                              fontSize: 15
+                            }}
+                          >
+                            {isMComplete ? "✓" : mIdx + 1}
+                          </div>
+                        </div>
+
+                        {/* Topics List within Phase */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                          {mTopics.map((topic, tIdx) => {
+                            const isDone = !!topic.completed;
+                            const globalStep = topic.stepNumber || mIdx * 4 + tIdx + 1;
+                            return (
+                              <div
+                                key={topic.id || tIdx}
+                                style={{
+                                  background: isDone ? "#fafafa" : "#fcfbfe",
+                                  borderRadius: 16,
+                                  border: isDone ? "1px solid #e2e8f0" : "1.5px solid #ede9fe",
+                                  padding: "18px 20px",
+                                  transition: "all 0.15s"
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                                  {/* Completion Checkbox */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleTopic(topic.id, isDone)}
+                                    style={{
+                                      width: 26,
+                                      height: 26,
+                                      borderRadius: 8,
+                                      background: isDone ? "#10b981" : "#ffffff",
+                                      border: isDone ? "none" : "2px solid #cbd5e1",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      color: "#fff",
+                                      fontSize: 15,
+                                      cursor: "pointer",
+                                      marginTop: 2,
+                                      flexShrink: 0,
+                                      transition: "all 0.15s"
+                                    }}
+                                  >
+                                    {isDone && <i className="ti ti-check" />}
+                                  </button>
+
+                                  <div style={{ flex: 1 }}>
+                                    {/* Topic Meta Header */}
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 8,
+                                        flexWrap: "wrap",
+                                        marginBottom: 6
+                                      }}
+                                    >
+                                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                        <span
+                                          style={{
+                                            padding: "2px 8px",
+                                            borderRadius: 6,
+                                            fontSize: 11,
+                                            fontWeight: 900,
+                                            background: "#1e1b4b",
+                                            color: "#e0e7ff"
+                                          }}
+                                        >
+                                          Step {globalStep}
+                                        </span>
+                                        <span
+                                          style={{
+                                            fontSize: 16,
+                                            fontWeight: 800,
+                                            color: isDone ? "#64748b" : "#1a1040",
+                                            textDecoration: isDone ? "line-through" : "none"
+                                          }}
+                                        >
+                                          {topic.title}
+                                        </span>
+                                      </div>
+
+                                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <span
+                                          style={{
+                                            padding: "2px 8px",
+                                            borderRadius: 99,
+                                            fontSize: 10.5,
+                                            fontWeight: 800,
+                                            background: topic.isRevision ? "#fef3c7" : "#ede9fe",
+                                            color: topic.isRevision ? "#b45309" : "#6d28d9",
+                                            textTransform: "uppercase"
+                                          }}
+                                        >
+                                          {topic.isRevision ? "Known Stack Revision" : "Core Skill Delta"}
+                                        </span>
+                                        <span style={{ fontSize: 11.5, fontWeight: 700, color: "#94a3b8" }}>
+                                          ⏱️ {topic.estimatedHours || 12} hrs
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Key Architecture Concepts */}
+                                    {topic.keyConcepts && (
+                                      <div style={{ fontSize: 13, color: "#475569", margin: "6px 0 10px", lineHeight: 1.5 }}>
+                                        <strong>Architecture Concepts:</strong> {topic.keyConcepts}
+                                      </div>
+                                    )}
+
+                                    {/* Hands-on Drill / Task */}
+                                    {topic.practiceTask && (
+                                      <div
+                                        style={{
+                                          background: "#f0fdf4",
+                                          borderRadius: 10,
+                                          padding: "9px 13px",
+                                          border: "1px solid #bbf7d0",
+                                          fontSize: 12.5,
+                                          color: "#166534",
+                                          marginBottom: 10,
+                                          lineHeight: 1.45
+                                        }}
+                                      >
+                                        <strong>🛠️ Hands-on Drill:</strong> {topic.practiceTask}
+                                      </div>
+                                    )}
+
+                                    {/* Expected Interview Questions with Revealable Talking Points */}
+                                    {Array.isArray(topic.interviewQuestions) && topic.interviewQuestions.length > 0 && (
+                                      <div
+                                        style={{
+                                          background: "#f8fafc",
+                                          borderRadius: 12,
+                                          padding: "12px 14px",
+                                          border: "1px solid #e2e8f0",
+                                          fontSize: 12.5,
+                                          color: "#334155",
+                                          marginBottom: 10
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            fontWeight: 700,
+                                            color: "#475569",
+                                            marginBottom: 8,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 6
+                                          }}
+                                        >
+                                          <i className="ti ti-target" style={{ color: "#7c3aed" }} />
+                                          Expected High-Frequency Interview Questions:
+                                        </div>
+
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                          {topic.interviewQuestions.map((iq, qIdx) => {
+                                            const qKey = `syl-${topic.id || tIdx}-q-${qIdx}`;
+                                            const showHint = !!expandedHints[qKey];
+                                            return (
+                                              <div
+                                                key={qIdx}
+                                                style={{
+                                                  background: "#fff",
+                                                  borderRadius: 8,
+                                                  padding: "8px 10px",
+                                                  border: "1px solid #e2e8f0"
+                                                }}
+                                              >
+                                                <div style={{ fontWeight: 600, color: "#1e293b", fontStyle: "italic" }}>
+                                                  "{iq.question}"
+                                                </div>
+                                                {iq.answerHint && (
+                                                  <div style={{ marginTop: 6 }}>
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleHint(qKey);
+                                                      }}
+                                                      style={{
+                                                        background: "none",
+                                                        border: "none",
+                                                        color: "#7c3aed",
+                                                        fontSize: 11,
+                                                        fontWeight: 700,
+                                                        cursor: "pointer",
+                                                        padding: 0,
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 4
+                                                      }}
+                                                    >
+                                                      <i className={`ti ${showHint ? "ti-chevron-up" : "ti-chevron-down"}`} />
+                                                      {showHint ? "Hide Talking Points" : "💡 Show Answer Talking Points & Trade-offs"}
+                                                    </button>
+                                                    {showHint && (
+                                                      <div
+                                                        style={{
+                                                          marginTop: 6,
+                                                          fontSize: 11.5,
+                                                          color: "#475569",
+                                                          lineHeight: 1.45,
+                                                          background: "#faf5ff",
+                                                          padding: "6px 10px",
+                                                          borderRadius: 6,
+                                                          borderLeft: "3px solid #7c3aed"
+                                                        }}
+                                                      >
+                                                        {iq.answerHint}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Recommended Reference */}
+                                    {topic.readingResource && (
+                                      <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 10 }}>
+                                        📖 <strong>Recommended Reference:</strong> {topic.readingResource}
+                                      </div>
+                                    )}
+
+                                    {/* Action button: AI mock interview */}
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate("/interviews", { state: { initialTopic: topic.title } })}
+                                      style={{
+                                        padding: "6px 14px",
+                                        borderRadius: 10,
+                                        background: "#f5f3ff",
+                                        border: "1px solid #ddd6fe",
+                                        color: "#7c3aed",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6
+                                      }}
+                                    >
+                                      <i className="ti ti-message-2-code" />
+                                      Practice This Topic in AI Mock Interview
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* ─── MILESTONE TRAIL VIEW ─── */
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: 28,
+                    alignItems: "start"
+                  }}
+                >
               {/* Left Column: Visual Winding Milestone Trail */}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
@@ -1346,6 +2359,8 @@ export default function RoadmapPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
 
           {/* ─────────────────────────────────────────────────────────────
               TAB 2: COMPATIBLE COMPANIES MATRIX

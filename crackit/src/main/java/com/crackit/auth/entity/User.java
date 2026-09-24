@@ -85,6 +85,9 @@ public class User {
     @Column(name = "preferred_locations", length = 200)
     private String preferredLocations;
 
+    @Column(name = "education", length = 500)
+    private String education;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -22,6 +22,7 @@ function SectionNav({ active, setActive }) {
     { id: "skills", icon: "ti-tag", label: "Skills" },
     { id: "experience", icon: "ti-briefcase", label: "Experience" },
     { id: "projects", icon: "ti-code", label: "Projects" },
+    { id: "education", icon: "ti-school", label: "Education" },
   ];
   return (
     <nav className="section-nav">
@@ -239,8 +240,28 @@ function ProjectCard({ project, onUpdate, onDelete }) {
           <button className="btn-icon btn-ghost btn-danger" onClick={() => onDelete(project.id)}><i className="ti ti-trash" /></button>
         </div>
       </div>
-        {(project.description) && !editing && (
-        <p className="proj-desc">{project.description}</p>
+        {project.description && !editing && (
+          <div className="proj-desc-wrap" style={{ marginTop: 8 }}>
+            {(() => {
+              const bullets = project.description
+                .split(/\n|•|\.\s+(?=[A-Z])/)
+                .map((b) => b.replace(/^[•\-\*]\s*/, "").trim())
+                .filter((b) => b.length > 5);
+
+              if (bullets.length > 1) {
+                return (
+                  <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#475569", fontSize: "0.86rem", lineHeight: 1.6 }}>
+                    {bullets.map((b, i) => (
+                      <li key={i} style={{ marginBottom: 4 }}>
+                        {b.endsWith(".") ? b : b + "."}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }
+              return <p className="proj-desc">{project.description}</p>;
+            })()}
+          </div>
         )}
       {editing && (
         <div className="exp-edit-form">
@@ -669,6 +690,19 @@ function SummaryPanel({ resumeSummary, onSaveSummary }) {
     </div>
   )
 }
+function getCategoryRank(catName) {
+  const lower = (catName || "").toLowerCase();
+  if (lower.includes("lang")) return 1;
+  if (lower.includes("framework") || lower.includes("backend") || lower.includes("frontend") || lower.includes("library") || lower.includes("libraries")) return 2;
+  if (lower.includes("database") || lower.includes("sql") || lower.includes("storage")) return 3;
+  if (lower.includes("cach") || lower.includes("redis")) return 4;
+  if (lower.includes("messag") || lower.includes("kafka") || lower.includes("event") || lower.includes("distributed")) return 5;
+  if (lower.includes("cloud") || lower.includes("devops") || lower.includes("aws") || lower.includes("docker") || lower.includes("ci/cd")) return 6;
+  if (lower.includes("tool") || lower.includes("test") || lower.includes("git")) return 7;
+  if (lower.includes("core") || lower.includes("concept") || lower.includes("arch") || lower.includes("design") || lower.includes("method")) return 8;
+  return 99;
+}
+
 function SkillsPanel({ skills, onAdd, onDelete }) {
   const [showModal, setShowModal] = useState(false);
 
@@ -678,6 +712,13 @@ function SkillsPanel({ skills, onAdd, onDelete }) {
     acc[cat].push(s);
     return acc;
   }, {});
+
+  const sortedCategories = Object.entries(grouped).sort(([catA], [catB]) => {
+    const rankA = getCategoryRank(catA);
+    const rankB = getCategoryRank(catB);
+    if (rankA !== rankB) return rankA - rankB;
+    return catA.localeCompare(catB);
+  });
 
   return (
     <div className="panel">
@@ -695,7 +736,7 @@ function SkillsPanel({ skills, onAdd, onDelete }) {
         </div>
       ) : (
         <div className="skills-section">
-          {Object.entries(grouped).map(([cat, items]) => (
+          {sortedCategories.map(([cat, items]) => (
             <div key={cat} className="skill-group">
               <span className="skill-category">{cat}</span>
               <div className="skill-tags">
@@ -779,6 +820,214 @@ function ProjectsPanel({ projects, onUpdate, onDelete, onAdd }) {
   );
 }
 
+function parseEducationList(rawEdu) {
+  if (!rawEdu) return [];
+  if (Array.isArray(rawEdu)) return rawEdu;
+  if (typeof rawEdu === "object") return [rawEdu];
+  if (typeof rawEdu === "string") {
+    const trimmed = rawEdu.trim();
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch (e) {}
+    }
+    if (trimmed) {
+      return [{ degree: trimmed, institution: "", year: "", score: "" }];
+    }
+  }
+  return [];
+}
+
+function EducationModal({ initial, onClose, onSave }) {
+  const [form, setForm] = useState({
+    degree: initial?.degree || "",
+    institution: initial?.institution || "",
+    year: initial?.year || "",
+    score: initial?.score || ""
+  });
+
+  const submit = (e) => {
+    if (e) e.preventDefault();
+    if (!form.degree.trim() && !form.institution.trim()) return;
+    onSave(form);
+  };
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{initial ? "Edit Education" : "Add Education"}</h3>
+          <button className="btn-icon" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Degree / Qualification</label>
+            <input
+              placeholder="e.g. B.Tech in Computer Science and Engineering"
+              value={form.degree}
+              onChange={(e) => setForm({ ...form, degree: e.target.value })}
+              autoFocus
+            />
+          </div>
+          <div className="form-group">
+            <label>Institution / University</label>
+            <input
+              placeholder="e.g. Indian Institute of Technology, Delhi"
+              value={form.institution}
+              onChange={(e) => setForm({ ...form, institution: e.target.value })}
+            />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Graduation Year / Duration</label>
+              <input
+                placeholder="e.g. 2019 - 2023 or 2023"
+                value={form.year}
+                onChange={(e) => setForm({ ...form, year: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Score / CGPA / Percentage</label>
+              <input
+                placeholder="e.g. 8.8 CGPA or 85%"
+                value={form.score}
+                onChange={(e) => setForm({ ...form, score: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-primary" onClick={submit}>Save Education</button>
+          <button className="btn-ghost-btn" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function EducationPanel({ education, onSaveEducation }) {
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const eduList = parseEducationList(education);
+
+  const handleDelete = (index) => {
+    const updated = eduList.filter((_, i) => i !== index);
+    onSaveEducation(updated);
+  };
+
+  const handleSave = (item) => {
+    let updated;
+    if (editingItem && typeof editingItem.index === "number") {
+      updated = eduList.map((e, i) => (i === editingItem.index ? item : e));
+    } else {
+      updated = [...eduList, item];
+    }
+    onSaveEducation(updated);
+    setShowModal(false);
+    setEditingItem(null);
+  };
+
+  return (
+    <div className="panel">
+      <div className="panel-header">
+        <h2>Education</h2>
+        <button
+          className="btn-primary-sm"
+          onClick={() => {
+            setEditingItem(null);
+            setShowModal(true);
+          }}
+        >
+          <i className="ti ti-plus" /> Add education
+        </button>
+      </div>
+
+      {eduList.length === 0 ? (
+        <div className="empty-state">
+          <i className="ti ti-school empty-icon" />
+          <p>No education details added yet.</p>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setEditingItem(null);
+              setShowModal(true);
+            }}
+          >
+            Add education
+          </button>
+        </div>
+      ) : (
+        <div className="exp-list">
+          {eduList.map((edu, idx) => (
+            <div key={idx} className="exp-card">
+              <div className="exp-header" style={{ cursor: "default" }}>
+                <div className="exp-meta" style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                  <span className="exp-title" style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1a1040" }}>
+                    {edu.degree || "Degree"}
+                  </span>
+                  {edu.institution && (
+                    <span className="exp-company" style={{ color: "#7c5cbf", fontWeight: 600 }}>
+                      {edu.institution}
+                    </span>
+                  )}
+                  {edu.year && <span className="exp-dates" style={{ color: "#999" }}>{edu.year}</span>}
+                  {edu.score && (
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        background: "#ede9fe",
+                        color: "#6d28d9",
+                        borderRadius: 99,
+                        fontSize: "0.75rem",
+                        fontWeight: 700
+                      }}
+                    >
+                      {edu.score}
+                    </span>
+                  )}
+                </div>
+                <div className="exp-actions">
+                  <button
+                    className="btn-icon btn-ghost"
+                    onClick={() => {
+                      setEditingItem({ ...edu, index: idx });
+                      setShowModal(true);
+                    }}
+                    title="Edit"
+                  >
+                    <i className="ti ti-edit" />
+                  </button>
+                  <button
+                    className="btn-icon btn-ghost btn-danger"
+                    onClick={() => handleDelete(idx)}
+                    title="Delete"
+                  >
+                    <i className="ti ti-trash" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <EducationModal
+          initial={editingItem}
+          onClose={() => {
+            setShowModal(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function ResumePage() {
@@ -797,24 +1046,24 @@ export default function ResumePage() {
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(`${API}/resume`, { headers: authHeaders() });
-    console.log("resume status:", res.status);
-   if (res.ok) {
-  const data = await res.json();
-  console.log("full resume data:", data);
-  const mr = Array.isArray(data.masterResume) ? data.masterResume[0] : data.masterResume;
-  setResume(mr || null);
-  setSkills(data.skills || []);
-  setExperiences((data.experiences || []).map(e => ({ ...e, bullets: e.bullets || [] })));
-  setProjects(data.projects || []);
-}
-  } catch (e) {
-    console.error("fetchAll error:", e);
-  }
-  setLoading(false);
-};
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/resume`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        const mr = Array.isArray(data.masterResume) ? data.masterResume[0] : data.masterResume;
+        const eduVal = data.education || mr?.education || "";
+        setResume(mr ? { ...mr, education: eduVal } : (eduVal ? { education: eduVal } : null));
+        setSkills(data.skills || []);
+        setExperiences((data.experiences || []).map(e => ({ ...e, bullets: e.bullets || [] })));
+        setProjects(data.projects || []);
+      }
+    } catch (e) {
+      console.error("fetchAll error:", e);
+    }
+    setLoading(false);
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -828,7 +1077,8 @@ export default function ResumePage() {
       if (res.data) {
         const data = res.data;
         const mr = Array.isArray(data.masterResume) ? data.masterResume[0] : data.masterResume;
-        setResume(mr || null);
+        const eduVal = data.education || mr?.education || "";
+        setResume(mr ? { ...mr, education: eduVal } : (eduVal ? { education: eduVal } : null));
         setSkills(data.skills || []);
         setExperiences((data.experiences || []).map(exp => ({ ...exp, bullets: exp.bullets || [] })));
         setProjects(data.projects || []);
@@ -877,14 +1127,41 @@ const saveSummary = async (summaryText) => {
   const res = await fetch(`${API}/resume/master`, {
     method,
     headers: authHeaders(),
-    body: JSON.stringify({ summary: summaryText }),
+    body: JSON.stringify({ summary: summaryText, education: resume?.education || "" }),
   })
 
   if (res.ok) {
     const data = await res.json()
-    setResume(data)
+    setResume(prev => ({ ...prev, ...data }))
   }
 }
+
+const saveEducation = async (eduList) => {
+  const method = resume ? "PUT" : "POST";
+  const eduStr = typeof eduList === "string" ? eduList : JSON.stringify(eduList);
+  const body = {
+    summary: resume?.summary || "",
+    education: eduStr
+  };
+  try {
+    const res = await fetch(`${API}/resume/master`, {
+      method,
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setResume((prev) => ({ ...prev, ...data, education: eduStr }));
+      window.dispatchEvent(
+        new CustomEvent('crackit:toast', {
+          detail: { type: 'success', message: 'Education details updated successfully!' }
+        })
+      );
+    }
+  } catch (e) {
+    console.error("Failed to save education", e);
+  }
+};
   const addSkill = async (form) => {
     const res = await fetch(`${API}/resume/skills`, { method: "POST", headers: authHeaders(), body: JSON.stringify(form) });
     if (res.ok){
@@ -949,6 +1226,10 @@ const strengthItems = [
   {
     label: 'Projects',
     done: projects.length > 0
+  },
+  {
+    label: 'Education',
+    done: parseEducationList(resume?.education).length > 0
   }
 ]
 
@@ -1563,6 +1844,12 @@ const missingItems = strengthItems.filter(i => !i.done)
                   onUpdate={updateProject}
                   onDelete={deleteProject}
                   onAdd={addProject}
+                />
+              )}
+              {activeSection === "education" && (
+                <EducationPanel
+                  education={resume?.education}
+                  onSaveEducation={saveEducation}
                 />
               )}
             </>

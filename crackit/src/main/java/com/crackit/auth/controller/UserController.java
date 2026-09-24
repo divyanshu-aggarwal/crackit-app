@@ -48,6 +48,7 @@ public class UserController {
         if (request.getLastWorkingDay() != null) user.setLastWorkingDay(request.getLastWorkingDay());
         if (request.getPreferredWorkMode() != null) user.setPreferredWorkMode(request.getPreferredWorkMode());
         if (request.getPreferredLocations() != null) user.setPreferredLocations(request.getPreferredLocations());
+        if (request.getEducation() != null) user.setEducation(request.getEducation());
         userRepository.save(user);
         return toResponse(user);
     }
@@ -75,6 +76,7 @@ public class UserController {
                 .lastWorkingDay(user.getLastWorkingDay())
                 .preferredWorkMode(user.getPreferredWorkMode())
                 .preferredLocations(user.getPreferredLocations())
+                .education(user.getEducation())
                 .subscriptionTier(user.getSubscriptionTier())
                 .subscriptionStatus(user.getSubscriptionStatus())
                 .subscriptionExpiresAt(user.getSubscriptionExpiresAt())

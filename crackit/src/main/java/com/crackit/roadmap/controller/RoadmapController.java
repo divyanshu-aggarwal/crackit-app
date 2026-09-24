@@ -24,6 +24,11 @@ public class RoadmapController {
         return ResponseEntity.ok(roadmapService.generateRoadmap(request));
     }
 
+    @PostMapping("/save")
+    public ResponseEntity<RoadmapResponse> saveRoadmap(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(roadmapService.saveCustomRoadmap(body));
+    }
+
     @GetMapping("/current")
     public ResponseEntity<RoadmapResponse> getCurrentRoadmap() {
         RoadmapResponse response = roadmapService.getCurrentRoadmap();

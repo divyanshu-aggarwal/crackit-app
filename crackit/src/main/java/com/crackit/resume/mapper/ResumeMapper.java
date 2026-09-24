@@ -53,6 +53,7 @@ public class ResumeMapper {
         return MasterResumeResponse.builder()
                 .id(resume.getId())
                 .summary(resume.getSummary())
+                .education(resume.getEducation())
                 .rawResumeText(resume.getRawResumeText())
                 .build();
     }

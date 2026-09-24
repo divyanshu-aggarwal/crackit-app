@@ -28,6 +28,9 @@ public class MasterResume {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
+    @Column(columnDefinition = "TEXT")
+    private String education;
+
     @Column(name = "raw_resume_text", columnDefinition = "LONGTEXT")
     private String rawResumeText;
 

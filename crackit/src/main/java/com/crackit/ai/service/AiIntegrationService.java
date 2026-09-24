@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import com.crackit.resume.entity.*;
 import com.crackit.resume.repository.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -193,21 +194,36 @@ public class AiIntegrationService {
                         (a, b) -> a
                 ));
 
-        Map<String, Object> payload = Map.of(
-                "fullName", user.getFullName() != null ? user.getFullName() : "guest",
-                "email", user.getEmail(),
-                "phone", user.getPhone() != null ? user.getPhone() : "",
-                "location", user.getLocation() !=null ? user.getLocation() : "",
-                "linkedinUrl", user.getLinkedinUrl() !=null ? user.getLinkedinUrl() : "",
-                "githubUrl", user.getGithubUrl() !=null ? user.getGithubUrl() : "",
-                "summary", tailored.getTailoredSummary() != null ? tailored.getTailoredSummary() : "",
-                "skills", skills.stream().map(s -> Map.of(
-                        "skillName", s,
-                        "category", skillCategoryMap.getOrDefault(s.toLowerCase(), "Other")
-                )).toList(),
-                "experiences", experiencesWithDates,
-                "projects", projects
-        );
+        MasterResume mr = masterResumeRepository.findByUserId(user.getId()).stream().findFirst().orElse(null);
+        String eduRaw = mr != null && mr.getEducation() != null && !mr.getEducation().isBlank()
+                ? mr.getEducation()
+                : user.getEducation();
+        Object eduObj = null;
+        if (eduRaw != null && !eduRaw.isBlank()) {
+            try {
+                eduObj = objectMapper.readValue(eduRaw, Object.class);
+            } catch (Exception ignored) {
+                eduObj = eduRaw;
+            }
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("fullName", user.getFullName() != null ? user.getFullName() : "guest");
+        payload.put("email", user.getEmail());
+        payload.put("phone", user.getPhone() != null ? user.getPhone() : "");
+        payload.put("location", user.getLocation() != null ? user.getLocation() : "");
+        payload.put("linkedinUrl", user.getLinkedinUrl() != null ? user.getLinkedinUrl() : "");
+        payload.put("githubUrl", user.getGithubUrl() != null ? user.getGithubUrl() : "");
+        payload.put("summary", tailored.getTailoredSummary() != null ? tailored.getTailoredSummary() : "");
+        payload.put("skills", skills.stream().map(s -> Map.of(
+                "skillName", s,
+                "category", skillCategoryMap.getOrDefault(s.toLowerCase(), "Other")
+        )).toList());
+        payload.put("experiences", experiencesWithDates);
+        payload.put("projects", projects);
+        if (eduObj != null) {
+            payload.put("education", eduObj);
+        }
 
         return aiServiceClient.generateResumePdf(payload);
     }

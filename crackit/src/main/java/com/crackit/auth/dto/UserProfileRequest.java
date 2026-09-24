@@ -20,4 +20,5 @@ public class UserProfileRequest {
     private String lastWorkingDay;
     private String preferredWorkMode;
     private String preferredLocations;
+    private String education;
 }

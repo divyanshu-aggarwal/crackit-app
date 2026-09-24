@@ -27,6 +27,7 @@ public class UserProfileResponse {
     private String lastWorkingDay;
     private String preferredWorkMode;
     private String preferredLocations;
+    private String education;
 
     private SubscriptionTier subscriptionTier;
     private String subscriptionStatus;

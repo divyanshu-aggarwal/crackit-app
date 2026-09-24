@@ -9,6 +9,7 @@ import com.crackit.resume.dto.response.*;
 import com.crackit.resume.entity.*;
 import com.crackit.resume.mapper.ResumeMapper;
 import com.crackit.resume.repository.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,7 @@ public class ResumeService {
     private final ProjectRepository projectRepository;
     private final ResumeMapper resumeMapper;
     private final AiServiceClient aiServiceClient;
+    private final ObjectMapper objectMapper;
 
     // ── Master Resume ─────────────────────────────────────
 
@@ -44,6 +46,7 @@ public class ResumeService {
                 .id(UUID.randomUUID().toString())
                 .user(user)
                 .summary(request.getSummary())
+                .education(request.getEducation())
                 .rawResumeText(request.getRawResumeText())
                 .build();
         return resumeMapper.mapMasterResume(masterResumeRepository.save(resume));
@@ -53,8 +56,13 @@ public class ResumeService {
         User user = getLoggedInUser();
         MasterResume resume = masterResumeRepository.findByUserId(user.getId())
                 .stream().findFirst()
-                .orElseThrow(() -> new RuntimeException("No master resume found"));
-        resume.setSummary(request.getSummary());
+                .orElse(MasterResume.builder().id(UUID.randomUUID().toString()).user(user).build());
+        if (request.getSummary() != null) resume.setSummary(request.getSummary());
+        if (request.getEducation() != null) {
+            resume.setEducation(request.getEducation());
+            user.setEducation(request.getEducation());
+            userRepository.save(user);
+        }
         if (request.getRawResumeText() != null) resume.setRawResumeText(request.getRawResumeText());
         return resumeMapper.mapMasterResume(masterResumeRepository.save(resume));
     }
@@ -67,12 +75,27 @@ public class ResumeService {
         try {
             Map<String, Object> parsed = aiServiceClient.parseResume(file.getBytes(), file.getOriginalFilename());
 
-            // upsert master resume summary
+            // upsert master resume summary & education
             String summary = (String) parsed.getOrDefault("summary", "");
+            Object parsedEdu = parsed.get("education");
+            String eduStr = "";
+            if (parsedEdu instanceof List<?> list && !list.isEmpty()) {
+                try {
+                    eduStr = objectMapper.writeValueAsString(list);
+                } catch (Exception ignored) {}
+            } else if (parsedEdu instanceof String s) {
+                eduStr = s;
+            }
+
             MasterResume resume = masterResumeRepository.findByUserId(user.getId())
                     .stream().findFirst()
                     .orElse(MasterResume.builder().id(UUID.randomUUID().toString()).user(user).build());
-            resume.setSummary(summary);
+            if (summary != null && !summary.isBlank()) resume.setSummary(summary);
+            if (!eduStr.isBlank()) {
+                resume.setEducation(eduStr);
+                user.setEducation(eduStr);
+                userRepository.save(user);
+            }
             masterResumeRepository.save(resume);
 
             // clear existing and repopulate skills
@@ -171,10 +194,23 @@ public class ResumeService {
         payload.put("email", user.getEmail());
         payload.put("phone", user.getPhone() != null ? user.getPhone() : "");
         payload.put("location", user.getLocation() != null ? user.getLocation() : "");
-        payload.put("linkedinUrl", "");
-        payload.put("githubUrl", "");
+        payload.put("linkedinUrl", user.getLinkedinUrl() != null ? user.getLinkedinUrl() : "");
+        payload.put("githubUrl", user.getGithubUrl() != null ? user.getGithubUrl() : "");
         payload.put("summary", summary != null ? summary : "");
         payload.put("photoBase64", photoBase64 != null ? photoBase64 : "");
+
+        MasterResume mr = masterResumeRepository.findByUserId(user.getId()).stream().findFirst().orElse(null);
+        String eduRaw = mr != null && mr.getEducation() != null && !mr.getEducation().isBlank()
+                ? mr.getEducation()
+                : user.getEducation();
+        if (eduRaw != null && !eduRaw.isBlank()) {
+            try {
+                Object eduParsed = objectMapper.readValue(eduRaw, Object.class);
+                payload.put("education", eduParsed);
+            } catch (Exception ignored) {
+                payload.put("education", eduRaw);
+            }
+        }
 
         payload.put("skills", skills.stream().map(s -> Map.of(
                 "skillName", s.getSkillName(),
@@ -212,20 +248,23 @@ public class ResumeService {
 
     public Map<String, Object> getFullResume() {
         User user = getLoggedInUser();
-        return Map.of(
-                "masterResume", masterResumeRepository.findByUserId(user.getId())
-                        .stream().map(resumeMapper::mapMasterResume).toList(),
-                "skills", skillRepository.findByUserId(user.getId())
-                        .stream().map(resumeMapper::mapSkill).toList(),
-                "experiences", experienceRepository.findByUserId(user.getId())
-                        .stream().map(experience -> {
-                            var bullets = experienceBulletRepository.findByExperienceId(experience.getId())
-                                    .stream().map(resumeMapper::mapExperienceBullet).toList();
-                            return resumeMapper.mapExperience(experience, bullets);
-                        }).toList(),
-                "projects", projectRepository.findByUserId(user.getId())
-                        .stream().map(resumeMapper::mapProject).toList()
-        );
+        MasterResume mr = masterResumeRepository.findByUserId(user.getId()).stream().findFirst().orElse(null);
+        String education = mr != null && mr.getEducation() != null ? mr.getEducation() : (user.getEducation() != null ? user.getEducation() : "");
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("masterResume", mr != null ? List.of(resumeMapper.mapMasterResume(mr)) : List.of());
+        res.put("education", education);
+        res.put("skills", skillRepository.findByUserId(user.getId())
+                .stream().map(resumeMapper::mapSkill).toList());
+        res.put("experiences", experienceRepository.findByUserId(user.getId())
+                .stream().map(experience -> {
+                    var bullets = experienceBulletRepository.findByExperienceId(experience.getId())
+                            .stream().map(resumeMapper::mapExperienceBullet).toList();
+                    return resumeMapper.mapExperience(experience, bullets);
+                }).toList());
+        res.put("projects", projectRepository.findByUserId(user.getId())
+                .stream().map(resumeMapper::mapProject).toList());
+        return res;
     }
 
     // ── Skills CRUD ───────────────────────────────────────
