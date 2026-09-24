@@ -13,6 +13,7 @@ import InterviewPrepPage from "./pages/InterviewPrepPage";
 import DiscoverPage from "./pages/DiscoverPage";
 import RoadmapPage from "./pages/RoadmapPage";
 import LandingPage from "./pages/LandingPage";
+import MyInterviewsPage from "./pages/MyInterviewsPage";
 import { ToastProvider } from './components/ui/ToastProvider'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import NotFoundPage from './pages/NotFoundPage'
