@@ -17,3 +17,7 @@ app.include_router(roadmap_router, prefix="/api/ai", tags=["Career Roadmap"])
 @app.get("/")
 def health_check():
     return {"message": "CrackIt AI Service is running"}
+
+@app.get("/health")
+def health_check_status():
+    return {"status": "UP", "service": "crackit-ai-service"}

@@ -92,3 +92,7 @@ razorpay:
   webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:mock_webhook_secret_crackit}
   mock-mode: ${RAZORPAY_MOCK_MODE:true}
 
+keepalive:
+  enabled: ${KEEPALIVE_ENABLED:true}
+  backend-url: ${RENDER_EXTERNAL_URL:}
+
